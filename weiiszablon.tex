@@ -1,0 +1,375 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% %
+%%% % weiiszablon.tex
+%%% % The Faculty of Electrical and Computer Engineering
+%%% % Rzeszow University Of Technology diploma thesis Template
+%%% % Szablon pracy dyplomowej Wydziału Elektrotechniki 
+%%% % i Informatyki PRz
+%%% % January, 2024
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[12pt,twoside]{article}
+
+\usepackage{weiiszablon}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{indentfirst}
+
+\author{Jakub Portas, Mateusz Skali, Katarzyna Materia, Magdalena Matuła, Wiktor Kuczek}
+
+% np. EF-123456, EN-654321, ...
+\studentID{}
+
+\title{Porównanie platform sprzętowych w detekcji anomalii dla przykładowych zbiorów - Jetson, RPI, ESP32, PC}
+\titleEN{}
+
+
+%%% wybierz rodzaj pracy wpisując jeden z poniższych numerów: ...
+% 1 = inżynierska	% BSc
+% 2 = magisterska	% MSc
+% 3 = doktorska		% PhD
+% 4 = praca inżynierska
+%%% na miejsce zera w linijce poniżej
+\newcommand{\rodzajPracyNo}{5}
+
+
+
+\abstract{Treść streszczenia po polsku}
+\abstractEN{Treść streszczenia po angielsku}
+
+\keywords{max. 5 słów kluczowych w 2 wierszach, oddzielanych przecinkami}
+\keywordsEN{max. five keywords in English}
+
+
+\begin{document}
+
+% strona tytułowa
+\maketitle
+
+\blankpage
+
+% spis treści
+\tableofcontents
+
+\clearpage
+\blankpage
+
+
+\section{Wstęp i cel projektu}
+W dobie czwartej rewolucji przemysłowej oraz gwałtownego rozwoju systemów Internetu Rzeczy, niezawodne monitorowanie stanu maszyn i wczesne wykrywanie usterek stały się kluczowymi wyzwaniami inżynieryjnymi. Tradycyjne podejście do analizy danych, polegające na przesyłaniu ogromnych ilości surowych odczytów z sensorów do scentralizowanej chmury obliczeniowej, generuje opóźnienia, problemy z przepustowością sieci oraz ryzyka związane z bezpieczeństwem danych. Z tego powodu coraz większą popularność zyskuje koncepcja przetwarzania brzegowego (Edge Computing), która zakłada przeniesienie algorytmów uczenia maszynowego bezpośrednio na urządzenia zlokalizowane blisko źródła sygnału. Wymaga to jednak starannego doboru metod analitycznych do mocno ograniczonych zasobów sprzętowych tych urządzeń.
+
+Wdrożenie przetwarzania brzegowego napotyka jednak na istotny problem inżynieryjny, czyli ogromną fragmentację rynku platform sprzętowych. Współczesny ekosystem Edge obejmuje diametralnie różne architektury od energooszczędnych mikrokontrolerów z niewielką ilością pamięci, przez komputery jednopłytkowe (SBC) ogólnego przeznaczenia oparte na architekturze ARM, aż po wysoce wyspecjalizowane, przemysłowe moduły wyposażone w akceleratory sztucznej inteligencji. Przeniesienie oprogramowania analitycznego ze środowiska stacji roboczej na te urządzenia nierzadko wiąże się ze spadkiem wydajności, problemami z architekturą oprogramowania czy brakiem sprzętowego wsparcia dla określonych instrukcji.
+
+Głównym celem niniejszego projektu grupowego jest wieloaspektowa ewaluacja i porównanie wydajności czterech zróżnicowanych platform sprzętowych w kontekście ich przydatności do zadań przemysłowego uczenia maszynowego. Do testów wytypowano: klasyczny komputer osobisty z procesorem architektury x86\_64, nowoczesny komputer jednopłytkowy Raspberry Pi 5, dedykowany moduł Edge w postaci NVIDIA Jetson Orin Nano oraz mikrokontroler z rodziny ESP32. W celu rzetelnego zmierzenia ich możliwości, jako znormalizowane obciążenie testowe (tzw. benchmark) wykorzystano zestaw trzech klasycznych algorytmów detekcji anomalii: Autoenkoder, Isolation Forest oraz strumieniowy model Half-Space Trees. Modele te, różniące się złożonością czasową i zapotrzebowaniem na pamięć operacyjną, posłużyły jako miara do obiektywnego obciążenia badanych architektur procesorów.
+
+Zakres prac koncentruje się przede wszystkim na rygorystycznych testach wydajnościowych sprzętu. Ocenie poddano czas wykonania pełnego potoku danych, opóźnienia (latencję) w przetwarzaniu pojedynczych próbek strumienia oraz maksymalny narzut na zasoby systemowe maszyny. Pomiary jakości samej klasyfikacji pełnią w tym projekcie funkcję walidacyjną. Mają za zadanie udowodnić stabilność i matematyczną tożsamość modeli po ich skompilowaniu na różnych architekturach sprzętowych (ARM vs x86). Kluczowym elementem pracy jest również analiza trudności środowiskowych, takich jak ograniczenia pamięci zunifikowanej, blokady systemowe czy kompatybilność bibliotek języka Python z akceleracją sprzętową. Wyniki tych badań pozwolą na sformułowanie praktycznych wniosków dotyczących doboru optymalnej platformy brzegowej do konkretnych wymagań systemów detekcji anomalii.
+
+\section{Charakterystyka środowisk testowych}
+Aby w pełni zbadać wpływ architektury sprzętowej na wydajność przetwarzania danych, do projektu wytypowano urządzenia reprezentujące cztery skrajnie odmienne środowiska obliczeniowe. Zestawienie to pokrywa pełne spektrum współczesnej inżynierii systemów od scentralizowanych stacji roboczych x86\_64, przez uniwersalne komputery jednopłytkowe i wyspecjalizowane moduły akcelerowane sprzętowo, aż po skrajnie ograniczone zasobowo mikrokontrolery. Badane algorytmy posłużyły na każdej z tych platform jako znormalizowane obciążenie testowe, mające na celu weryfikację ich limitów operacyjnych.
+\subsection{Stacja robocza x86\_64 (PC) – Środowisko referencyjne}
+Jako sprzętowy punkt odniesienia wykorzystano wysokowydajny komputer osobisty Lenovo LOQ. Architektura ta reprezentuje w projekcie klasyczne serwery chmurowe. Wykorzystanie procesora w architekturze x86\_64, zasilania sieciowego oraz aktywnego układu chłodzenia eliminuje wszelkie ograniczenia związane z dławieniem termicznym oraz oszczędzaniem energii. Głównym celem implementacji algorytmów na tym urządzeniu było wyznaczenie maksymalnej, teoretycznej przepustowości potoku danych dla użytych bibliotek w języku Python. Wyniki z PC stanowią "złoty standard", pozwalający na precyzyjne zmierzenie, jak duży narzut wydajnościowy w postaci opóźnień lub spadku liczby operacji na sekundę pociąga za sobą przeniesienie kodu na energooszczędne urządzenia brzegowe z rodziny ARM.
+
+\subsection{Komputer jednopłytkowy Raspberry Pi 5}
+W segmencie urządzeń brzegowych ogólnego przeznaczenia badaniom poddano Raspberry Pi 5. W nowoczesnych topologiach Przemysłu 4.0 tego typu minikomputery pełnią zazwyczaj funkcję bramek brzegowych (IoT Gateways), agregując i filtrując dane bezpośrednio z maszyn. Wybór tej platformy podyktowany był chęcią sprawdzenia, jak "surowa", wysokotaktowana architektura ARM Cortex-A76 bez wbudowanych, dedykowanych akceleratorów sztucznej inteligencji radzi sobie ze skomplikowanymi, wielowątkowymi obciążeniami matematycznymi w języku Python. Platforma ta posłużyła do oceny balansu między przystępnością cenową i uniwersalnością sprzętu, a jego realną przepustowością w zadaniach klasycznej analizy danych.
+
+\subsection{NVIDIA Jetson Orin Nano (Edge AI)}
+Trzecim środowiskiem testowym był moduł NVIDIA Jetson Orin Nano. W przeciwieństwie do Raspberry Pi, jest to urządzenie wysoce wyspecjalizowane, zaprojektowane od podstaw dla systemów autonomicznych i przemysłowych, gdzie priorytetem jest niezawodność procesora oraz dostęp do zunifikowanej pamięci operacyjnej współdzielonej między CPU i GPU. Jetson został wybrany do zestawienia jako reprezentant układów ukierunkowanych na sztuczną inteligencję. Ewaluacja na tym urządzeniu miała charakter krytyczny. Jej celem było zbadanie, jak asymetryczna architektura sprzętowa, oparta na wolniej taktowanym, ale bezpiecznym procesorze z rodziny Safety Ready oraz potężnym GPU, reaguje na obciążenie klasycznymi algorytmami CPU-bound jak drzewa decyzyjne z pakietu scikit-learn czy river, których kod źródłowy uniemożliwia wydelegowanie operacji na rdzenie CUDA.
+
+\subsection{Mikrokontroler ESP32 – Warstwa czujnikowa (Deep Edge)}
+
+\section{Analiza i porównanie platform sprzętowych oraz architektur procesorów}
+Kluczowym elementem oceny wydajności algorytmów na różnych platformach (Edge vs. PC) jest dogłębna analiza ich specyfikacji sprzętowej. Do badań wykorzystano trzy zróżnicowane urządzenia: klasyczny komputer osobisty pełniący rolę punktu odniesienia, wszechstronny komputer jednopłytkowy Raspberry Pi 5 oraz wysoce wyspecjalizowany moduł sztucznej inteligencji NVIDIA Jetson Orin Nano. Zestawienie podstawowych parametrów badanych procesorów przedstawiono w Tabeli \ref{tab:cpu}.
+
+\begin{table}[htpb]
+    \centering
+    \caption{Zestawienie parametrów technicznych wykorzystanych platform obliczeniowych}
+    \label{tab:cpu}
+    \renewcommand{\arraystretch}{1.3} % Zwiększa odstępy między wierszami dla lepszej czytelności
+\begin{tabular}{|p{3cm}|p{3.5cm}|p{4.2cm}|p{3.5cm}|}
+        \hline
+        \textbf{Cecha} & \textbf{Raspberry Pi 5} & \textbf{NVIDIA Jetson Orin Nano} & \textbf{PC (Lenovo LOQ)} \\ 
+        \hline
+        \textbf{Model procesora} & Broadcom BCM2712 & Niestandardowy układ SoC NVIDIA & AMD Ryzen 7 7435HS \\ 
+        \hline
+        \textbf{Architektura} & Arm Cortex-A76 (64-bit) & Arm Cortex-A78AE (64-bit) & x86\_64 (Zen 3+) \\ 
+        \hline
+        \textbf{Rdzenie / Wątki} & 4 / 4 & 6 / 6 & 8 / 16 \\ 
+        \hline
+        \textbf{Taktowanie} & 2,4 GHz & 1,5 GHz & 3,1 GHz (Boost do 4,5 GHz) \\ 
+        \hline
+        \textbf{Pamięć RAM} & 4GB LPDDR4X & 8GB LPDDR5 (zintegrowana) & Obsługa DDR5 (niezależna) \\ 
+        \hline
+        \textbf{Pobór mocy (TDP)} & Bardzo niski (ok. 5-12W) & Niski (konfigurowalny 7W - 15W) & Wysoki (45W+) \\ 
+        \hline
+    \end{tabular}
+\end{table}
+
+Porównywane platformy sprzętowe reprezentują trzy zupełnie odmienne filozofie projektowania mikroprocesorów, co bezpośrednio determinuje ich potencjał obliczeniowy oraz obszary zastosowań. Podstawowe różnice można sprowadzić do dwóch głównych kategorii: surowej wydajności obliczeniowej oraz mechanizmów zapewniających bezpieczeństwo i niezawodność.
+
+\subsection{Wydajność obliczeniowa i architektura rdzeni}
+Pod względem czystej specyfikacji technicznej najwyższym potencjałem dysponuje procesor AMD Ryzen 7 7435HS. Jest to rozbudowany układ oparty na architekturze x86\_64 (mikroarchitektura Zen 3+ Rembrandt R), wyposażony w 8 rdzeni fizycznych z obsługą 16 wątków. Charakteryzuje się on najszybszym zegarem, taktowanie bazowe wynosi 3,1 GHz, a w trybie Boost osiąga 4,5 GHz. Architekturę tę wspiera niezwykle pojemna hierarchia pamięci podręcznej (16 MB współdzielonej pamięci L3 oraz 4 MB pamięci L2), co predysponuje ten układ do błyskawicznego przetwarzania dużych wolumenów danych.
+
+W segmencie urządzeń wbudowanych (ARM) różnice są równie istotne. Komputer jednopłytkowy Raspberry Pi 5 opiera się na układzie Broadcom BCM2712 z 4-rdzeniowym procesorem Arm Cortex-A76. Dzięki taktowaniu na poziomie 2,4 GHz oraz 2 MB współdzielonej pamięci L3, architektura ta oferuje 2- do 3-krotny wzrost wydajności względem poprzedniej generacji platformy, stanowiąc bardzo wydajną jednostkę ogólnego przeznaczenia.
+
+Z kolei NVIDIA Jetson Orin Nano (w wariancie 8 GB RAM) wykorzystuje 6-rdzeniowy procesor w nowszej architekturze Arm Cortex-A78AE. Choć jego taktowanie wynosi zaledwie 1,5 GHz, sama struktura rdzenia A78AE oferuje o 30% wyższą wydajność przetwarzania instrukcji na cykl w stosunku do starszych generacji układów ARM. Projektanci firmy NVIDIA postawili w tym przypadku na ekstremalną efektywność energetyczną oraz zoptymalizowanie potoku pod kątem równoległych operacji sztucznej inteligencji, świadomie rezygnując z wysokich częstotliwości taktowania rdzeni CPU.
+
+\subsection{Niezawodność i bezpieczeństwo sprzętowe}
+Analizowane układy różnią się drastycznie pod kątem mechanizmów bezpieczeństwa, co wynika z ich rynkowego przeznaczenia:
+\begin{enumerate}[label=\alph*), leftmargin=1.25cm] 
+	\item \textbf{Cortex-A78AE (NVIDIA Jetson)} -- Jest to architektura zbudowana wokół koncepcji "Safety Ready", dedykowana do systemów autonomicznych, robotyki i przemysłu ciężkiego. Jej najważniejszą cechą jest sprzętowa obsługa funkcji Split-Lock. Pozwala ona rdzeniom na pracę w trybie wysokiej niez. W tym trybie dwa rdzenie wykonują synchronicznie tę samą operację, wzajemnie weryfikując swoje wyniki, co pozwala na natychmiastowe wykrycie i wyeliminowanie błędów obliczeniowych (np. wywołanych promieniowaniem kosmicznym)
+	\item \textbf{Zen 3+ (AMD Ryzen)} -- Architektura ta skupia się przede wszystkim na stabilności i inteligentnym zarządzaniu energią w ekosystemach serwerowych i konsumenckich, wprowadzając ponad 50 nowych stanów zasilania względem poprzedniej generacji.
+	\item \textbf{Cortex-A76 (Raspberry Pi 5)} -- Oferuje sprzętowe rozszerzenia kryptograficzne, które znacząco przyspieszają szyfrowanie strumieni danych (np. SSL/TLS). Stanowi to doskonałe zabezpieczenie dla standardowych aplikacji sieciowych, jednak sam procesor nie posiada certyfikacji ani mechanizmów nadmiarowych (jak Jetson) pozwalających na użycie go w krytycznych systemach podtrzymujących funkcje życiowe lub sterujących autonomicznymi pojazdami.
+\end{enumerate}
+
+\section{Podstawy teoretyczne wykorzystanych algorytmów detekcji anomalii}
+W ramach niniejszego projektu do detekcji anomalii wykorzystano trzy algorytmy reprezentujące odmienne paradygmaty uczenia maszynowego: sieci neuronowe oparte na rekonstrukcji sygnału, klasyczne metody zespołowe oparte na drzewach decyzyjnych oraz algorytmy strumieniowe.
+\subsection{Autoencodery}
+Autoenkoder to specyficzny rodzaj sztucznej sieci neuronowej, którego celem jest rekonstrukcja danych wejściowych na warstwie wyjściowej. Sieć ta składa się z dwóch głównych części: enkodera, który kompresuje dane wielowymiarowe do ukrytej reprezentacji o niższym wymiarze, tzw. wąskiego gardła, oraz dekodera, który stara się odtworzyć pierwotny sygnał na podstawie tej skompresowanej reprezentacji. W kontekście detekcji anomalii, model ten jest trenowany wyłącznie na danych opisujących normalne działanie systemu. W rezultacie sieć uczy się ignorować szum i poprawnie rekonstruować powtarzalne wzorce. Gdy na wejściu sieci pojawi się anomalia, której model wcześniej nie widział, enkoder nie potrafi poprawnie zmapować go w swojej warstwie ukrytej, co skutkuje wysokim błędem rekonstrukcji, najczęściej mierzonym jako błąd średniokwadratowy MSE (\ref{eq:mse}). Obserwacje przekraczające wyznaczony próg błędu są klasyfikowane jako anomalie.
+
+\begin{equation}
+    MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
+    \label{eq:mse}
+\end{equation}
+
+Jak wykazali Chandola i in. w klasycznym przeglądzie literatury dotyczącym detekcji anomalii (Anomaly Detection: A Survey, 2009), modele oparte na rekonstrukcji są niezwykle skuteczne w przypadku danych wielowymiarowych. Znajdują one szerokie zastosowanie w analizie sygnałów z wielu zintegrowanych sensorów przemysłowych, gdzie kluczowe jest wychwycenie skomplikowanych, nieliniowych zależności pomiędzy poszczególnymi czujnikami, które są trudne do zamodelowania tradycyjnymi metodami statystycznymi.
+
+\subsection{Isolation forest}
+Algorytm Lasu Izolacyjnego różni się fundamentalnie od większości metod detekcji, które starają się najpierw zdefiniować profil normalności, a następnie szukają odchyleń od tej normy. Metoda ta skupia się na bezpośrednim odizolowaniu anomalii. Algorytm buduje zespół losowych drzew binarnych. W każdym kroku losowo wybierana jest cecha, np. odczyt z konkretnego czujnika, a następnie losowo dobierany jest punkt podziału pomiędzy minimalną a maksymalną wartością tej cechy. Z racji tego, że anomalie są z definicji nieliczne i odmienne, wymagają one znacznie mniejszej liczby podziałów, aby zostać odizolowanymi od reszty zbioru danych w pojedynczym liściu drzewa. W związku z tym, ścieżka od korzenia do liścia dla anomalii jest znacznie krótsza niż dla normalnych próbek. Ocena anomalii dla każdego punktu danych jest wyliczana na podstawie średniej długości ścieżki we wszystkich wygenerowanych drzewach.
+
+Zaproponowany przez autorów Liu, Tinga i Zhou (Isolation Forest, 2008) algorytm charakteryzuje się liniową złożonością czasową oraz niskim zapotrzebowaniem na pamięć operacyjną. Ponieważ nie opiera się na obliczaniu odległości czy gęstości, świetnie sprawdza się w wielowymiarowych zbiorach danych. Jest szeroko stosowany w cyberbezpieczeństwie oraz diagnostyce maszyn przy przetwarzaniu wsadowym, będąc wysoce odpornym na szum w danych treningowych.
+
+\subsection{Half-Space Trees}
+Algorytm Half-Space Trees to nowsze podejście oparte na strukturach drzewiastych, jednak zaprojektowane od podstaw do pracy w środowisku strumieniowym. W przeciwieństwie do standardowych algorytmów wsadowych, które wymagają wczytania całego zbioru danych do pamięci, HS-Trees uczy się inkrementalnie próbka po próbce. Algorytm tworzy zbiór drzew losowych, gdzie każda przestrzeń cech jest dzielona na równe półprzestrzenie, stąd nazwa Half-Space. Przechodzące przez system dane aktualizują liczniki w węzłach drzew. Model ten często wykorzystuje mechanizm okna czasowego, dzięki czemu starsze dane są zapominane, a algorytm adaptuje się do zmieniającego się w czasie profilu normalnego zachowania maszyny. Próbka, która trafia do węzła o bardzo niskim liczniku wystąpień w danym oknie czasowym, otrzymuje wysoką punktację anomalii.
+
+Jak udowodniono w pracy twórców algorytmu (Tan, Ting i Liu, Fast Anomaly Detection for Streaming Data, 2011), HS-Trees to rozwiązanie dedykowane dla środowisk, w których dane napływają w sposób ciągły z dużą prędkością, a zasoby obliczeniowe i pamięciowe są ograniczone. Ze względu na swój stały czas aktualizacji i minimalny odcisk w pamięci RAM, algorytm ten jest idealnym kandydatem do zastosowań w ekosystemach Internetu Rzeczy oraz platformach brzegowych, gdzie urządzenia takie jak Raspberry Pi muszą dokonywać predykcji w czasie rzeczywistym na bezpośrednich odczytach z maszyn.
+
+\section{Przygotowanie środowiska uruchomieniowego Python na platformie Raspberry Pi}
+Podczas konfiguracji platformy Raspberry Pi napotkano na trudności związane z instalacją bibliotek projektowych za pomocą globalnego menedżera pakietów pip. Próby te kończyły się krytycznym błędem informującym o "środowisku zarządzanym zewnętrznie", co jest bezpośrednim wynikiem rygorystycznego wdrożenia standardu PEP 668 w najnowszych systemach operacyjnych opartych na architekturze Debian. Standard ten wprowadzono w celu eliminacji konfliktów zależności pomiędzy systemowym instalatorem apt, a menedżerem pakietów języka Python. Ponieważ współczesne dystrybucje Linuksa opierają stabilność swoich wewnętrznych usług na konkretnych wersjach bibliotek Pythona, modyfikacja globalnej przestrzeni nazw przez użytkownika mogłaby doprowadzić do awarii całego systemu. W odpowiedzi na wykrycie znacznika EXTERNALLY-MANAGED w systemowym katalogu, narzędzie pip celowo blokuje instalację, wymuszając tym samym stosowanie bezpieczniejszych praktyk inżynierii oprogramowania.
+
+Aby zainstalować zależności wymagane przez algorytmy uczenia maszynowego bez ryzyka naruszenia stabilności powłoki systemu, konieczne było utworzenie odizolowanego środowiska projektowego. W tym celu wykorzystano wbudowany w język Python moduł venv. W pierwszej kolejności, w docelowym katalogu projektu, wygenerowano wirtualne środowisko uruchomieniowe przy użyciu polecenia \ref{lst:venv}.
+
+\begin{lstlisting}[language=bash, numbers=none, caption={Inicjalizacja środowiska venv}, label={lst:venv}]
+python -m venv .venv
+\end{lstlisting}
+
+Komenda ta utworzyła wydzieloną strukturę katalogów, zawierającą niezależną kopię interpretera języka Python oraz własną, pustą przestrzeń na pakiety. Następnie, aby skierować system do korzystania z tej wyizolowanej instancji, środowisko zostało aktywowane komendą \ref{lst:source}.
+\begin{lstlisting}[language=bash, numbers=none, caption={Włączenie środowiska venv}, label={lst:source}]
+source .venv/bin/activate
+\end{lstlisting}
+
+Przejście w tryb środowiska wirtualnego, sygnalizowane pojawieniem się prefiksu .venv w wierszu poleceń, odblokowało pełny, bezpieczny dostęp do menedżera pakietów. Dopiero w tak odizolowanym kontenerze możliwe było pobranie i zainstalowanie wszystkich niezbędnych bibliotek za pomocą polecenia pip install. Zastosowana procedura nie tylko pozwoliła na sprawne ominięcie blokad nałożonych przez system operacyjny, ale również zagwarantowała, że specyficzne wersje pakietów użytych do trenowania modeli detekcji anomalii pozostaną w pełni hermetyczne i nie wpłyną negatywnie na działanie innych usług działających na urządzeniu Raspberry Pi.
+
+\section{Przygotowanie środowiska na platformie Jetson Orin Nano}
+Początkowy etap prac projektowych obejmował przygotowanie odpowiedniego środowiska operacyjnego na module NVIDIA Jetson Orin Nano, co wiązało się z nieoczekiwanymi trudnościami sprzętowymi. Pierwsza próba polegała na wykorzystaniu posiadanego dysku z zainstalowanym systemem Kali Linux. Próba ta zakończyła się natychmiastowym niepowodzeniem ze względu na fundamentalne różnice w architekturze procesorów. Powszechnie stosowane systemy operacyjne z komputerów osobistych są kompilowane pod architekturę x86\_64, która jest całkowicie niekompatybilna z układami wbudowanymi firmy NVIDIA, opartymi na architekturze ARM64. Moduł Jetson nie był w stanie rozpoznać ani uruchomić instrukcji z takiego nośnika.
+
+Wobec powyższego, dysk został sformatowany w celu przeprowadzenia czystej instalacji dedykowanego systemu. Podjęto próbę klasycznego zbootowania instalatora z nośnika USB bezpośrednio na przygotowany dysk docelowy. To podejście również zakończyło się fiaskiem, uwydatniając kolejną cechę charakterystyczną platform brzegowych. Urządzenia z rodziny Jetson nie posiadają klasycznego układu BIOS/UEFI znanego z komputerów PC, który pozwalałby na swobodne bootowanie z zewnętrznych urządzeń USB. Ich proces rozruchu opiera się na specyficznym bootloaderze, który do inicjalizacji systemu na zewnętrznych dyskach NVMe/SSD wymaga przeprowadzenia skomplikowanego procesu flashingu za pomocą zewnętrznego komputera-hosta i narzędzia NVIDIA SDK Manager.
+
+Ostatecznie, aby uzyskać stabilne i działające środowisko w sposób optymalny czasowo, konieczna była zmiana nośnika pamięci. Zgodnie z natywnym wsparciem rozruchowym modułu, zakupiono kartę pamięci microSD, na którą wgrano dedykowany, oficjalny obraz systemu operacyjnego Linux for Tegra JetPack OS. Wykorzystanie wbudowanego interfejsu kart pamięci pozwoliło na natychmiastowe i bezproblemowe zbootowanie systemu. Dopiero ten krok umożliwił przejście do właściwych prac związanych z konfiguracją środowiska programistycznego i testowaniem algorytmów uczenia maszynowego.
+
+
+\section{Problem akceleracji GPU na platformie NVIDIA Jetson}
+Podczas prób wdrożenia i przyspieszenia algorytmów detekcji anomalii na platformie NVIDIA Jetson Orin Nano, napotkano barierę programową. Pomimo fizycznej obecności wydajnego układu graficznego, żadna z wykorzystywanych bibliotek nie była w stanie wydelegować do niego obliczeń. Analiza tego zjawiska wykazała, że problem wynika bezpośrednio z braku kompatybilności ekosystemu klasycznego uczenia maszynowego z architekturą CUDA w środowisku ARM64. Ograniczenia te można podzielić na cztery główne kategorie.
+\subsection{Brak natywnego wsparcia GPU w standardowych bibliotekach w języku Python}
+Podstawowe biblioteki użyte w projekcie, takie jak scikit-learn, odpowiedzialna za modele Isolation Forest oraz MLPRegressor oraz river, implementująca algorytm Half-Space Trees, zostały zaprojektowane od podstaw z myślą o wykonywaniu obliczeń wyłącznie na głównym procesorze. Ich kod źródłowy nie posiada zaimplementowanych tzw. backendów dla technologii NVIDIA CUDA. Oznacza to, że niezależnie od konfiguracji sprzętowej urządzenia, biblioteki te fizycznie nie potrafią skompilować swojego grafu obliczeniowego do instrukcji zrozumiałych dla rdzeni graficznych i zawsze wymuszają wykonanie kodu na procesorze głównym.
+\subsection{Ograniczenia pakietu NVIDIA RAPIDS (cuML) na architekturze ARM64}
+Rozwiązaniem problemu braku wsparcia GPU dl w środowisku PC jest zazwyczaj użycie dedykowanej biblioteki NVIDIA RAPIDS (cuML). Niestety, platforma Jetson opiera się na architekturze ARM64, podczas gdy pakiety RAPIDS są rozwijane, kompilowane i optymalizowane głównie pod kątem dużych serwerów opartych na architekturze x86\_64. Próba instalacji tych bibliotek za pomocą standardowych menedżerów pakietów, np. pip na Jetsonie kończy się niepowodzeniem z powodu braku gotowych, prekompilowanych plików binarnych. Wymusza to niezwykle skomplikowaną kompilację ze źródeł, która na urządzeniach brzegowych często skutkuje konfliktami wersji kompilatora lub niekompatybilnością z wersją oprogramowania JetPack.
+\subsection{Konieczność zmiany frameworku dla sieci neuronowych}
+W przypadku algorytmu Autoenkodera, realizowanego za pomocą klasy MLPRegressor z biblioteki scikit-learn, ograniczenie jest identyczne, biblioteka ta nie potrafi korzystać z akceleracji sprzętowej. Aby wykorzystać potencjał modułu Jetson Orin Nano do sieci neuronowych, konieczne byłoby całkowite przepisanie architektury modelu z użyciem frameworków takich jak PyTorch lub TensorFlow. Tylko te potężne biblioteki Deep Learningowe posiadają pełne, natywne wsparcie dla ekosystemu JetPack oraz potrafią bezpośrednio mapować operacje na rdzenie CUDA i Tensor w architekturze ARM.
+\subsection{Próba wdrożenia oficjalnego środowiska kontenerowego (NVIDIA L4T ML)}
+W ramach pogłębionej diagnostyki i wykluczenia ewentualnych błędów konfiguracyjnych systemu operacyjnego, podjęto próbę uruchomienia skryptów wewnątrz oficjalnego kontenera Docker, udostępnianego przez firmę NVIDIA dla platform brzegowych, z rodziny Linux for Tegra Machine Learning. Chociaż to wysoce zoptymalizowane środowisko dostarcza preinstalowane sterowniki CUDA, cuDNN oraz TensorRT, nie przyniosło ono oczekiwanego rozwiązania w postaci akceleracji GPU dla badanych algorytmów. Analiza zawartości kontenera wykazała, że oficjalne obrazy NVIDIA są przygotowywane niemal wyłącznie pod kątem wsparcia głębokich sieci neuronowych. Wchodzące w skład kontenera biblioteki do klasycznej analizy danych, takie jak scikit-learn czy pakiety strumieniowe, to wciąż ich standardowe, procesorowe dystrybucje. Środowisko kontenerowe, nawet z poprawnie zmapowanym akceleratorem graficznym, nie potrafi automatycznie przetłumaczyć ani wymusić wykonania instrukcji sprzętowych dla algorytmów, które architektonicznie nie posiadają zaprogramowanego backendu CUDA. Eksperyment ten ostatecznie potwierdził, że brak akceleracji wynika bezpośrednio z braku implementacji algorytmów na GPU w ekosystemie ARM64, a nie z błędnej konfiguracji samego urządzenia Jetson.
+
+Zjawisko braku możliwości wykonania algorytmów na GPU udowadnia, że przeniesienie projektu na platformę brzegową wymaga ścisłego doboru technologii oprogramowania. Klasyczne uczenie maszynowe w języku Python pozostaje w dużej mierze domeną procesorów. Próba wymuszenia akceleracji sprzętowej na platformie ARM dla algorytmów niebędących głębokimi sieciami neuronowymi napotyka na nieprzezwyciężone w standardowy sposób bariery w samym kodzie źródłowym dostępnych bibliotek.
+
+\section{Charakterystyka wykorzystanego zbioru danych}
+Do celów badawczych, treningu oraz ewaluacji zaimplementowanych algorytmów wykorzystano ogólnodostępny zbiór danych Pump Sensor Data udostępniony na platformie Kaggle. Reprezentuje on rzeczywiste, historyczne odczyty parametrów pracy przemysłowej pompy wodnej zlokalizowanej w niewielkiej miejscowości. Zbiór ten stanowi klasyczny przykład danych typu Internet of Things pochodzących z systemów SCADA, co czyni go idealnym fundamentem do symulacji obciążeń na platformach brzegowych. Struktura zbioru podizelona jest na trzy główne grupy informacyjne.
+\subsection{Przestrzeń czasowa (Timestamp Data)}
+Zbiór określa dokładny moment wykonania każdego pomiaru. Odczyty ze wszystkich czujników były rejestrowane synchronicznie w stałych, jednominutowych interwałach. Taka ziarnistość pozwala na traktowanie zgromadzonych informacji jako wielowymiarowych szeregów czasowych. Dzięki precyzyjnym znacznikom czasowym możliwe jest sekwencyjne odtwarzanie danych w pętli programu, symulując strumieniowanie w czasie rzeczywistym dla algorytmu Half-Space Trees oraz prowadzenie analizy trendów środowiskowych poprzedzających wystąpienie awarii.
+\subsection{Przestrzeń atrybutów fizycznych (Sensor Data)}
+Główną część zbioru stanowią surowe odczyty fizyczne z urządzenia. Baza zawiera 52 niezależne serie danych pochodzące z oddzielnych jednostek sensorowych maszyny, oznaczonych odpowiednio od sensor\_00 do sensor\_51. Ponieważ są to wartości surowe, prosto z systemów pomiarowych, charakteryzują się one obecnością naturalnego szumu pomiarowego, wartości odstających oraz brakami w danych. Skrajnym przypadkiem jest zmienna sensor\_15, która składa się całkowicie z wartości pustych. Taka struktura bazy wymusiła w początkowym etapie przeprowadzania badań zastosowanie mechanizmów wstępnego przetwarzania danych, w tym imputacji braków metodami propagacji wartości  oraz standaryzacji zakresów za pomocą algorytmu MinMaxScaler.
+\subsection{Zmienna celu}
+Kluczowym atrybutem zbioru, pełniącym funkcję referencyjną, tzw. ground truth, jest etykieta aktualnego stanu maszyny. Choć ewaluowane algorytmy należą do rodziny modeli nienadzorowanych lub częściowo nadzorowanych, etykieta ta była niezbędna do końcowej oceny ich skuteczności (wyliczenia macierzy pomyłek i metryki F1-Score). Występuje ona w trzech stanach:
+\begin{enumerate}[label=\alph*), leftmargin=1.25cm] 
+	\item \textbf{NORMAL (Praca normalna)} -- Oznacza poprawne funkcjonowanie pompy. W ramach metodyki projektowej, podzbiór danych oznaczony tym statusem został odizolowany i posłużył jako jedyne źródło wiedzy dla modeli w fazie treningu (uczenie się zdrowego profilu maszyny).
+	\item \textbf{BROKEN (Awaria)} -- Oznacza krytyczny moment wystąpienia usterki systemu. W analizowanym rocznym okresie badawczym odnotowano dokładnie 7 takich zdarzeń. Stanowią one główne anomalie, które implementowane modele miały za zadanie wykryć wyłącznie na podstawie odchyleń od normy w odczytach z sensorów.
+	\item \textbf{RECOVERING (Okres regeneracji)} -- Wskazuje na okres przejściowy następujący po awarii, w którym system pompowy był naprawiany, stabilizowany i przywracany do pełnej sprawności operacyjnej.
+\end{enumerate}
+Zastosowanie tak zdefiniowanego, surowego i wysoce niezbalansowanego zbioru danych pozwoliło na przeprowadzenie realistycznych testów zaimplementowanych architektur detekcji anomalii, wiernie oddając warunki panujące w nowoczesnym przemyśle.
+
+\section{Szczegóły implementacyjne i dobór hiperparametrów modeli}
+Zrozumienie działania badanych algorytmów wymaga analizy ich implementacji w kodzie oraz uzasadnienia doboru kluczowych hiperparametrów. Poniżej przedstawiono szczegółowy opis konfiguracji każdego z modeli wraz z listingami najważniejszych fragmentów kodu.
+\subsection{Powtarzalność wyników badań}
+We wszystkich implementowanych modelach oraz funkcjach podziału zbioru danych zastosowano stałe ziarno losowości \kod{random\_state=42} (lub \kod{seed=42} dla biblioteki river). W uczeniu maszynowym inicjalizacja wag sieci neuronowych, losowanie cech w drzewach decyzyjnych czy mieszanie próbek opierają się na generatorach liczb pseudolosowych. Ustawienie stałego ziarna, w tym przypadku popularnej w środowisku programistycznym liczby 42, jest kluczową praktyką badawczą. Gwarantuje to determinizm eksperymentu, czyli pozwala na dokładne i sprawiedliwe porównanie czasów wykonania oraz metryk F1-Score na różnych platformach sprzętowych, mając pewność, że na każdym urządzeniu zainicjalizowano matematycznie identyczny model.
+\subsection{Implementacja Autoenkodera}
+\begin{lstlisting}[language=python, numbers=none, caption={Parametry uczenia Autoencodera}, label={lst:autoendocer}]
+# Inicjalizacja modelu
+model = MLPRegressor(hidden_layer_sizes=(32, 16, 32), activation='relu', solver='adam', max_iter=300, random_state=42)
+
+# Trening (tylko na klasie NORMAL)
+mask_normal = (y_train == 0).values
+X_train_normal_scaled = X_train_scaled[mask_normal]
+model.fit(X_train_normal_scaled, X_train_normal_scaled)
+
+\end{lstlisting}
+
+Wykorzystano wielowarstwowy perceptron (\kod{MLPRegressor}), ponieważ w trybie uczenia nienadzorowanego wejście sieci (zmienna X) jest podawane również jako oczekiwane wyjście (zmienna y). Architektura składająca się z warstw o rozmiarach 32, 16 i 32 (\ref{lst:autoendocer}) węzłów realizuje fundamentalne założenie autoenkodera, tworząc tzw. "wąskie gardło" (bottleneck) w środkowej warstwie. Wejściowy wektor cech jest kompresowany z n-wymiarów początkowych przez warstwę 32 neuronów do zaledwie 16 neuronów, a następnie rekonstruowany z powrotem przez warstwę 32 neuronów do oryginalnego wymiaru. Taka kompresja zapobiega zjawisku, w którym sieć uczy się zwykłej funkcji tożsamościowej, czyli przepisywania wejścia na wyjście 1:1 i zmusza model do wyekstrahowania najważniejszych, ukrytych cech sygnału.
+
+Linijki izolujące klasę \kod{NORMAL} i trenujące model wyłącznie na niej stanowią esencję detekcji anomalii. Gdybyśmy do modelu wprowadzili cały zbiór, łącznie z anomaliami, sieć nauczyłaby się rekonstruować również błędy. Ucząc ją tylko poprawnych zachowań maszyny, zapewniamy, że błąd rekonstrukcji MSE wystrzeli w górę, gdy pojawi się nieznana anomalia.
+
+\subsection{Implementacja Isolation Forest}
+
+\begin{lstlisting}[language=python, numbers=none, caption={Parametry uczenia Isolation Forest}, label={lst:forest}]
+model = IsolationForest(n_estimators=100, n_jobs=-1, random_state=42)
+model.fit(X_train_normal_scaled)
+
+# Odwrocenie wynikow funkcji decyzyjnej
+test_scores = -model.decision_function(X_test_scaled)
+\end{lstlisting}
+
+Liczba 100  (Listing \ref{lst:forest}) określa rozmiar lasu (ilość drzew izolacyjnych). W oryginalnej pracy badawczej dotyczącej tego algorytmu autorzy udowodnili, że długości ścieżek w drzewach decyzyjnych bardzo szybko zbiegają się do ostatecznych wartości. Zwiększenie tej liczby np. do 500 czy 1000 drzew drastycznie wydłużyłoby czas obliczeń i zużycie pamięci RAM na urządzeniach brzegowych (Raspberry Pi, Jetson), nie przynosząc zauważalnej poprawy trafności klasyfikacji. Wartość 100 stanowi optymalny kompromis między wydajnością a szybkością.
+
+Zastosowanie operacji \kod{-model.decision\_function()} jest niezwykle ważnym zabiegiem inżynierskim w kodzie. Domyślnie biblioteka \kod{scikit-learn} zwraca wyniki ujemne dla próbek anomalnych, a dodatnie dla normalnych. Odwrócenie znaku wartości ujednolica logikę programu dla wszystkich trzech algorytmów, w każdym przypadku wprowadzona zostaje zasada “im wyższy wynik punktowy, tym większa anomalia", co pozwala na zastosowanie jednej uniwersalnej funkcji wyliczania progu.
+
+\subsection{Implementacja Half-Space Trees}
+\begin{lstlisting}[language=python, numbers=none, caption={Parametry uczenia HS-Trees}, label={lst:hs}]
+model = anomaly.HalfSpaceTrees(n_trees=25, height=15, window_size=70000, seed=42)
+
+# Petla strumieniowego uczenia online
+for i, xi in enumerate(X_train_normal_scaled):
+    model.learn_one(dict(enumerate(xi)))
+
+\end{lstlisting}
+
+Algorytm strumieniowy musi reagować błyskawicznie na pojedyncze zdarzenia. Ponieważ struktura drzew HS-Trees jest aktualizowana i przeszukiwana przy każdej iteracji (dla każdej pojedynczej próbki danych), mniejsza liczba drzew, \kod{n\_trees=25}, optymalizuje opóźnienie (latencję) na słabych procesorach typu ARM. Dodatkowo parametr \kod{height=15} narzuca twardy limit na głębokość każdego drzewa (maksymalnie $2^{15}$ liści na drzewo). Zabezpiecza to moduły IoT, posiadające ograniczoną ilość pamięci operacyjnej, przed niekontrolowanym rozrostem struktur danych w przypadku długotrwałego nasłuchiwania na dane ze strumienia.
+
+Fundamentalną cechą algorytmów strumieniowych (Online Machine Learning), odróżniającą je od klasycznych modeli wsadowych (batch processing), jest zdolność do ciągłej adaptacji i usuwania nieaktualnych danych. Biblioteka \kod{river} realizuje tę funkcjonalność za pomocą mechanizmu przesuwnego okna (sliding window). Dobór parametru \kod{window\_size=70000} w implementacji algorytmu Half-Space Trees nie był przypadkowy i wynikał bezpośrednio z charakterystyki analizowanego zbioru danych. Ponieważ całkowity wolumen użytych danych historycznych wynosił 140 000 rekordów, ustawienie szerokości okna na 70 000 oznacza, że model w każdym momencie ewaluacji przetwarza i opiera swoje decyzje na rozkładzie statystycznym stanowiącym dokładnie połowę całkowitego "cyklu życia" badanej maszyny.
+
+Taka konfiguracja stanowi optymalny kompromis inżynierski. Z jednej strony, utrzymywanie w pamięci aż 70 000 punktów referencyjnych buduje wysoce stabilny profil "normalności". Dzięki temu system wykazuje odpowiednią bezwładność, jest odporny na chwilowe zaszumienia sygnału z sensorów i nie generuje fałszywych alarmów przy niegroźnych mikroskokach. Z drugiej strony, zastosowanie sztywnego limitu bufora zabezpiecza model przed kluczowym w systemach przemysłowych zjawiskiem dryfu koncepcji (concept drift). Układy mechaniczne ulegają naturalnemu zużyciu, a ich domyślne parametry pracy (np. drgania, temperatura) mogą z biegiem czasu powoli ewoluować. Poprzez sukcesywne usuwanie najstarszych obserwacji wykraczających poza połowę cyklu danych, algorytm HS-Trees w sposób płynny i autonomiczny adaptuje się do nowych warunków pracy, nie traktując ich od razu jako krytycznej awarii. Ponadto, narzucenie twardego limitu elementów zapamiętywanych przez struktury drzewiaste gwarantuje stałą i przewidywalną złożoność pamięciową, co chroni wbudowane platformy brzegowe przed wyczerpaniem zasobów RAM, niezależnie od tego, jak długo urządzenie pozostaje uruchomione.
+
+Zastosowanie funkcji \kod{model.learn\_one(dict(enumerate(xi)))} uwidacznia różnicę architektoniczną biblioteki \kod{river}. Zamiana wektora \kod{NumPy} na słownik języka Python w każdej iteracji symuluje odebranie pojedynczego pakietu JSON/słownikowego bezpośrednio z maszyny przemysłowej za pośrednictwem sieci (np. protokołem MQTT), co stanowi doskonałe odwzorowanie produkcyjnego scenariusza w urządzeniach Edge.
+
+\subsection{Obliczanie progu anomalii}
+\begin{lstlisting}[language=python, numbers=none, caption={Próg anomalii}, label={lst:th}]
+threshold = np.percentile(train_scores, 98.8)
+pred_labels_test = (test_scores > threshold).astype(int)
+\end{lstlisting}
+
+Próg anomalii dla poszczególnych algorytmów był pozyskiwany w sposób następujący:
+\begin{enumerate}[label=\alph*), leftmargin=1.25cm] 
+\item \textbf{Autoencoder} --
+poprzez funkcje model.predict(\kod{X\_train\_normal\_scaled}) generowana jest odpowiedź modelu jak wyglądają dane wyjściowe na próbach na których model był uczony. Następnie liczony jest średni błąd rekonstrukcji (różnica między danymi wejściowymi w wiśniowymi, to podnosi kwadratu). Bład został zapisany do zmiennej train\_scores
+\item \textbf{Isolation forest} --
+fukcja model.decision\_function zwraca im niższa wartość im krótsza jest ścieżka, aby logika pasowała do reszty kodu dodano na początku tej funkcji minus aby ta logikę odwrócić i aby krótsza ścieżka otrzymywała wyższa wartość wartość. Następnie wartość zapisywana jest do zmiennej train\_scores 
+
+\item \textbf{Half-space tree} -- 
+Funkcja score one wylicza wynik na podstawie tego, jak wiele normalnych próbek wylądowało wcześniej w tych samych obszarach co badana próbka, obliczone wartości  trafiają do wartość train\_score.  
+
+\end{enumerate}
+Następnie liczony jest próg anomalii thershold. Używana jest funkcja percentyla, która sortuje wszystkie liczby w tablicy od najmniejszego do największego. Próg zostaje ustawiony w takim miejscu, że 98.8\% wszystkich normalnych odczytów znalazło się poniżej niego. Pozostałe 1.2\% wyników (najwyższe błedy w zbiorze normalnym) jest traktowanej jako anomalia.
+
+\section{Metodyka przygotowania danych oraz profilowania wydajnościowego}
+\subsection{Akwizycja i preprocessing danych telemetrycznych}
+Eksperymenty przeprowadzono z wykorzystaniem zbioru Pump sensor data, zawierającego wielowymiarowe szeregi czasowe z 52 czujników przemysłowych, rejestrowane z częstotliwością jednej minuty. W pierwszej fazie preprocessingu dokonano selekcji cech, odrzucając metadane niebędące odczytami fizycznymi (znacznik czasu, indeks, tekstowa etykieta statusu).
+
+Ze względu na niekompletność strumienia danych (szczególnie zauważalną w przypadku sensora nr 15), zastosowano kaskadową strategię imputacji braków. W pierwszej kolejności wykorzystano metodę propagacji ostatniej znanej wartości w przód (ang. forward fill), następnie w tył (backward fill), a wszelkie rezydualne braki zastąpiono zerami.
+
+Proces binaryzacji etykiet przekształcił problem w zadanie klasyfikacji dwuklasowej:
+\begin{itemize}[label={--},labelsep=0.4cm,leftmargin=0.6cm]
+\item Stan NORMAL (poprawna praca układu) zamapowano jako 0,
+\item Stany awaryjne BROKEN oraz przejściowe RECOVERING zagregowano do wspólnej klasy anomalii oznaczonej jako 1.
+\end{itemize}
+
+Podziału na zbiór treningowy (70\%) i testowy (30\%) dokonano z rygorystycznym zachowaniem chronologii szeregu czasowego. Wyłączenie tasowania próbek było krytyczne, aby zapobiec wyciekowi danych z przyszłości do zbioru uczącego. Indeksy podziału utrwalono w plikach train.txt i test.txt, gwarantując pełną reprodukowalność eksperymentów dla różnych algorytmów.
+
+Następnie surowe odczyty poddano normalizacji za pomocą transformacji MinMaxScaler, skalując przestrzeń cech do przedziału $[0, 1]$. Standaryzacja ta jest niezbędnym warunkiem stabilnej konwergencji sieci neuronowych (Autoenkoderów). W ostatnim kroku, bazując na paradygmacie uczenia nienadzorowanego, na zbiór treningowy nałożono maskę logiczną, filtrując wyłącznie odczyty zdrowej maszyny. Dzięki temu algorytmy modelowały wyłącznie profil "normy", kwalifikując wszelkie odchylenia w fazie testowej jako anomalię.
+
+\subsection{Profilowanie zasobów sprzętowych i termicznych}
+
+
+\section{Wyniki detekcji i parametry wydajnościowe}
+
+\vspace{0.5cm}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Metryki jakości klasyfikacji i macierz pomyłek}
+    \vspace{0.2cm}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{@{} l l c c c c c r r r r @{}}
+    \toprule
+    \textbf{Platforma} & \textbf{Algorytm} & \textbf{Thresh.} & \textbf{Prec.} & \textbf{Rec.} & \textbf{F1} & \textbf{Acc.} & \textbf{TP} & \textbf{FP} & \textbf{TN} & \textbf{FN} \\
+    \midrule
+    PC & Autoencoder & 0.0081 & 0.0287 & 0.9737 & 0.0558 & 0.9621 & 74 & 2502 & 63518 & 2 \\
+    PC & Isolation Forest & 0.0778 & 0.0753 & 0.7895 & 0.1375 & 0.9886 & 60 & 737 & 65283 & 16 \\
+    PC & Half-Space Trees & 0.9762 & 0.0987 & 0.8684 & 0.1772 & 0.9907 & 66 & 603 & 65417 & 10 \\
+    \midrule
+    Raspberry Pi & Autoencoder & 0.0081 & 0.0287 & 0.9737 & 0.0558 & 0.9621 & 74 & 2502 & 63518 & 2 \\
+    Raspberry Pi & Half-Space Trees & 0.9762 & 0.0987 & 0.8684 & 0.1772 & 0.9907 & 66 & 603 & 65417 & 10 \\
+    Raspberry Pi & Isolation Forest & 0.0769 & 0.0756 & 0.8158 & 0.1384 & 0.9883 & 62 & 758 & 65262 & 14 \\
+    \midrule
+    Jetson & Autoencoder & 0.0081 & 0.0287 & 0.9737 & 0.0558 & 0.9621 & 74 & 2502 & 63518 & 2 \\
+    Jetson & Isolation Forest & 0.0778 & 0.0753 & 0.7895 & 0.1375 & 0.9886 & 60 & 737 & 65283 & 16 \\
+    Jetson & Half-Space Trees & 0.9975 & 0.6667 & 0.0263 & 0.0506 & 0.9989 & 2 & 1 & 66019 & 74 \\
+    \midrule
+    \multicolumn{11}{c}{\textit{ESP - Model nauczony na PC, przepuszczenie przez wagi (Inference)}} \\
+    \midrule
+    ESP & Autoencoder & 0.0081 & 0.0287 & 0.9737 & 0.0558 & 0.9621 & 74 & 2502 & 63518 & 2 \\
+    ESP & Isolation Forest & 0.0778 & 0.0753 & 0.7895 & 0.1375 & 0.9886 & 60 & 737 & 65283 & 16 \\
+    ESP & Half-Space Trees & 0.9762 & 0.0987 & 0.8684 & 0.1772 & 0.9907 & 66 & 603 & 65417 & 10 \\
+    \bottomrule
+    \end{tabular}%
+    }
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Parametry wydajnościowe i obciążenie zasobów}
+    \vspace{0.2cm}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{@{} l l r r r r r r r r r @{}}
+    \toprule
+    \textbf{Platforma} & \textbf{Algorytm} & \textbf{Tren.} & \textbf{Detekcja} & \textbf{Lat. śr.} & \textbf{P95} & \textbf{P99} & \textbf{Przepust.} & \textbf{CPU} & \textbf{RAM} & \textbf{Temp.} \\
+     & & \textbf{[s]} & \textbf{[s]} & \textbf{[ms]} & \textbf{[ms]} & \textbf{[ms]} & \textbf{[op/s]} & \textbf{[\%]} & \textbf{[MB]} & \textbf{[$^\circ$C]} \\
+    \midrule
+    PC & Autoencoder & 9.855 & 0.0454 & 0.0671 & 0.0785 & 0.1041 & 1456109 & 13.0 & 3.535 & brak \\
+    PC & Isolation Forest & 1.319 & 0.1308 & 4.0783 & 5.257 & 5.853 & 505489 & 21.6 & 68.474 & brak \\
+    PC & Half-Space Trees & 134.540 & 13.8561 & 0.2080 & 0.2301 & 0.2375 & 4770 & 9.8 & 268.981 & brak \\
+    \midrule
+    Raspberry Pi & Autoencoder & 18.223 & 0.1471 & 0.0844 & 0.0892 & 0.1002 & 449323 & 25.1 & 3.544 & 49.0 \\
+    Raspberry Pi & Half-Space Trees & 233.411 & 16.2614 & 0.2460 & 0.2680 & 0.2777 & 4064 & 23.2 & 268.981 & 47.4 \\
+    Raspberry Pi & Isolation Forest & 1.722 & 0.2364 & 6.2460 & 6.350 & 6.913 & 279590 & 25.5 & 44.001 & 46.9 \\
+    \midrule
+    Jetson & Autoencoder & 27.308 & 0.3307 & 0.2419 & brak & 0.2924 & 199888 & 58.7 & 3.483 & brak \\
+    Jetson & Isolation Forest & 2.815 & 0.4014 & 10.9220 & brak & 11.925 & 164659 & 18.5 & 46.593 & brak \\
+    Jetson & Half-Space Trees & 2684.675 & 51.8407 & 0.8049 & brak & 0.9051 & 1274 & 48.8 & 400.044 & brak \\
+    \midrule
+    \multicolumn{11}{c}{\textit{ESP - Model nauczony na PC, przepuszczenie przez wagi (Inference)}} \\
+    \midrule
+    ESP & Autoencoder & 9.855 & 0.000062 & 0.0873 & 0.1725 & 0.2009 & 11450 & brak & 0.0417 & 65.0 \\
+    ESP & Isolation Forest & 1.319 & 0.001072 & 1.0792 & 1.4383 & 1.5156 & 926 & brak & 0.0417 & 64.8 \\
+    ESP & Half-Space Trees & 134.540 & 0.000272 & 0.2320 & 0.3063 & 0.3245 & 4310 & brak & 0.0422 & 65.0 \\
+    \bottomrule
+    \end{tabular}%
+    }
+\end{table}
+
+
+\begin{itemize}[label={--},labelsep=0.4cm,leftmargin=0.6cm]
+\item wartości chwilowe podstawowych wielkości fizycznych używanych np. w elektrotechnice należy zapisać małymi literami, np. $u$, $i$, lub stosować zapis np. $u(t)$, lub stosować indeks ,,$t$'' przy wielkości, np. $U_t$,
+
+\end{itemize}
+
+\section{Podsumowanie i wnioski końcowe}
+
+
+\clearpage
+
+\addcontentsline{toc}{section}{Literatura}
+
+\begin{thebibliography}{4}
+\end{thebibliography}
+
+\clearpage
+
+\end{document} 
