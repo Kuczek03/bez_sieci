@@ -195,7 +195,63 @@ Kluczowym atrybutem zbioru, pełniącym funkcję referencyjną, tzw. ground trut
 \end{enumerate}
 Zastosowanie tak zdefiniowanego, surowego i wysoce niezbalansowanego zbioru danych pozwoliło na przeprowadzenie realistycznych testów zaimplementowanych architektur detekcji anomalii, wiernie oddając warunki panujące w nowoczesnym przemyśle.
 
-\section{Szczegóły implementacyjne i dobór hiperparametrów modeli}
+\section{Metodyka przygotowania danych oraz profilowania wydajnościowego}
+\subsection{Akwizycja i preprocessing danych telemetrycznych}
+Eksperymenty przeprowadzono z wykorzystaniem zbioru Pump sensor data, zawierającego wielowymiarowe szeregi czasowe z 52 czujników przemysłowych, rejestrowane z częstotliwością jednej minuty. W pierwszej fazie preprocessingu dokonano selekcji cech, odrzucając metadane niebędące odczytami fizycznymi (znacznik czasu, indeks, tekstowa etykieta statusu).
+
+Ze względu na niekompletność strumienia danych (szczególnie zauważalną w przypadku sensora nr 15), zastosowano kaskadową strategię imputacji braków. W pierwszej kolejności wykorzystano metodę propagacji ostatniej znanej wartości w przód (ang. forward fill), następnie w tył (backward fill), a wszelkie rezydualne braki zastąpiono zerami.
+
+Proces binaryzacji etykiet przekształcił problem w zadanie klasyfikacji dwuklasowej:
+\begin{itemize}[label={--},labelsep=0.4cm,leftmargin=0.6cm]
+\item Stan NORMAL (poprawna praca układu) zamapowano jako 0,
+\item Stany awaryjne BROKEN oraz przejściowe RECOVERING zagregowano do wspólnej klasy anomalii oznaczonej jako 1.
+\end{itemize}
+
+Podziału na zbiór treningowy (70\%) i testowy (30\%) dokonano z rygorystycznym zachowaniem chronologii szeregu czasowego. Wyłączenie tasowania próbek było krytyczne, aby zapobiec wyciekowi danych z przyszłości do zbioru uczącego. Indeksy podziału utrwalono w plikach train.txt i test.txt, gwarantując pełną reprodukowalność eksperymentów dla różnych algorytmów.
+
+Następnie surowe odczyty poddano normalizacji za pomocą transformacji MinMaxScaler, skalując przestrzeń cech do przedziału $[0, 1]$. Standaryzacja ta jest niezbędnym warunkiem stabilnej konwergencji sieci neuronowych (Autoenkoderów). W ostatnim kroku, bazując na paradygmacie uczenia nienadzorowanego, na zbiór treningowy nałożono maskę logiczną, filtrując wyłącznie odczyty zdrowej maszyny. Dzięki temu algorytmy modelowały wyłącznie profil "normy", kwalifikując wszelkie odchylenia w fazie testowej jako anomalię.
+
+\subsection{Profilowanie termiczne i ograniczenia platformowe}
+Istotnym elementem oceny wydajności modeli na urządzeniach brzegowych było monitorowanie temperatury układów obliczeniowych. Próba ujednoliconego pomiaru termicznego za pomocą skryptu napisanego w języku Python uwypukliła jednak wyzwania związane z fragmentacją środowisk sprzętowych i architekturą systemów operacyjnych. W toku eksperymentów ustalono, że stabilne i wiarygodne profilowanie temperatury udało się zrealizować wyłącznie na jednej z czterech badanych platform. Ograniczenia wynikały z następujących różnic architektonicznych:
+\begin{enumerate}[label=\alph*), leftmargin=1.25cm]
+\item \textbf{ESP32}
+\item \textbf{Komputer osobisty oraz Nvidia Jetson} -- Na obu tych platformach próby odczytu temperatury z poziomu skryptu zakończyły się niepowodzeniem. Wynikało to ze specyfiki systemów operacyjnych, zabezpieczeń izolujących procesy użytkownika oraz braku ustandaryzowanego interfejsu takiego jak np. uniwersalny plik wirtualny w systemach Linux. Skrypt w języku Python nie był w stanie uzyskać bezpośredniego dostępu do telemetrii sensorów termicznych na płycie głównej bez głębokiej ingerencji w uprawnienia administracyjne (np. wywoływania zewnętrznych narzędzi systemowych typu lm-sensors, co zaburzałoby uniwersalność kodu).
+\item \textbf{Raspberry Pi} -- Architektura systemu operacyjnego tego mikrokomputera okazała się w pełni kompatybilna z przyjętym modelem pomiarowym. Platforma ta jako jedyna pozwoliła na stabilny i ciągły odczyt temperatury układu, co zrealizowano poprzez bezpośrednie odczytywanie wartości z systemowego pliku wirtualnego /sys/class/thermal/thermal\_zone0/temp. Zebrane w ten sposób dane umożliwiły precyzyjną ocenę nagrzewania się urządzenia pod obciążeniem algorytmów analitycznych.
+\end{enumerate}
+
+\subsection{Pomiar czasów globalnych}
+W tym trybie wykorzystano standardową funkcję systemową time.time(), która rejestruje bezwzględny czas wykonywania się głównych bloków kodu. Funkcję wywoływano (oraz obliczano różnicę czasu) w następujących momentach działania aplikacji:
+\begin{enumerate}[label=\alph*), leftmargin=1.25cm]
+    \item \textbf{Czas przygotowania danych} -- Wyznaczenie czasu potrzebnego na załadowanie zbioru CSV do pamięci, uzupełnienie braków (tzw. kaskadowy fill) oraz skalowanie cech.
+    \item \textbf{Czas treningu (t\_train)} -- Znaczniki czasu wstawiono bezpośrednio przed i po bloku uczącym dany model, co pozwoliło określić globalny czas potrzebny na wytworzenie profilu normalnego zachowania na konkretnej platformie.
+    \item \textbf{Całkowity czas detekcji (t\_detect\_total)} -- Pomiar ten obejmował przepuszczenie całego zbioru testowego przez nauczony model naraz, co symuluje wydajność klasycznego przetwarzania paczkowego (ang. batch processing).
+\end{enumerate}
+
+\subsection{Analiza opóźnień (Latency) i przepustowości (Throughput)}
+Kluczowym kryterium ewaluacji systemów wbudowanych jest czas reakcji na nowe zdarzenia. W celu rzetelnego zmierzenia opóźnień wnioskowania (ang. inference latency), ze zbioru testowego wyizolowano losową próbę 200 obserwacji.
+
+Oprogramowanie przetwarzało te próbki sekwencyjnie w pętli (symulując napływający strumień danych z czujników), rejestrując czas z mikrosekundową precyzją bezpośrednio przed i po wywołaniu predykcji modelu. Zebrane czasy posłużyły do wyznaczenia kluczowych metryk brzegowych:
+\begin{enumerate}[label=\alph*), leftmargin=1.25cm]
+\item \textbf{Średnia latencja (lat\_mean)} – Przeciętny czas, jakiego model potrzebuje na przeanalizowanie jednego wektora cech (odpowiadającego jednej minucie pracy maszyny).
+\item \textbf{Kwantyle opóźnień (lat\_p95, lat\_p99)} – Wartości określające górną granicę czasu potrzebnego na przetworzenie odpowiednio 95\% i 99\% najgorszych (najdłużej analizowanych) próbek. Metryka P99 jest w inżynierii standardem określającym stabilność i gwarancję czasu odpowiedzi (SLA) w systemach czasu rzeczywistego.
+\item \textbf{Przepustowość (throughput)} – Wyrażona w liczbie przetworzonych próbek na sekundę, określa maksymalną wydajność systemu. Informuje, ile minut historycznej lub napływającej telemetrii dane urządzenie jest w stanie przeanalizować w ciągu jednej sekundy czasu rzeczywistego.
+\end{enumerate}
+
+\subsection{Profilowanie obciążenia procesora}
+Do monitorowania aktywności jednostki obliczeniowej wykorzystano zewnętrzną bibliotekę psutil, skonfigurowaną do pracy w trybie różnicowym (z parametrem interval=None). Podejście to pozwala na asynchroniczne badanie średniego obciążenia procesora pomiędzy zdefiniowanymi punktami kontrolnymi w kodzie, bez sztucznego wstrzymywania i blokowania głównego wątku aplikacji. Cykl zbierania metryk podzielono na trzy strategiczne etapy:
+\begin{enumerate}[label=\alph*), leftmargin=1.25cm]
+\item \textbf{Inicjalizacja punktu odniesienia} -- Pierwsze wywołanie funkcji na starcie skryptu, pełniące rolę kalibracji systemu (uruchomienie wewnętrznego timera biblioteki psutil).
+\item \textbf{Odczyt po przygotowaniu danych} -- Rejestracja narzutu obliczeniowego wygenerowanego przez operacje wejścia/wyjścia (I/O), proces kaskadowego uzupełniania braków oraz normalizację cech.
+\item \textbf{Odczyt po sfinalizowaniu treningu} -- Ewaluacja kosztu zasobów zużytych stricte na optymalizację algorytmu (np. budowę drzew binarnych lub dopasowanie wag w sieci neuronowej).
+\end{enumerate}
+Końcowy wskaźnik utylizacji procesora, prezentowany w raporcie podsumowującym, wyznaczany jest jako średnia arytmetyczna z pomiarów zarejestrowanych w etapach drugim i trzecim. Przyjęta metodyka gwarantuje miarodajną i obiektywną ocenę całkowitego kosztu obliczeniowego, jakiego wymagała kompleksowa realizacja głównej logiki detekcyjnej systemu.
+
+\subsection{Obserwacja alokacji pamięci RAM}
+Pomiary zużycia pamięci operacyjnej zrealizowano przy użyciu wbudowanej biblioteki \kod{tracemalloc}, która umożliwia precyzyjne śledzenie alokacji pamięci przez procesy środowiska Python. Proces monitorowania inicjowany jest wywołaniem funkcji \kod{tracemalloc.start()} bezpośrednio przed rozpoczęciem fazy treningowej modelu. Od tego momentu system rejestruje każdy zaalokowany blok pamięci, pozwalając na dokładne uchwycenie rzeczywistego narzutu pamięciowego algorytmu w trakcie jego pracy.
+
+Po sfinalizowaniu procesu uczenia wywoływana jest metoda tracemalloc.get\_traced\_memory(). Funkcja ta zwraca krotkę zawierającą dwie zmienne: zużycie bieżące oraz zużycie szczytowe. Do celów analitycznych ekstrahowana jest wyłącznie wartość szczytowa, ponieważ to ona determinuje maksymalne zapotrzebowanie modelu na zasoby, co stanowi parametr krytyczny przy wdrażaniu rozwiązań na urządzenia brzegowe o ograniczonej pojemności pamięci SRAM/RAM. Uzyskany wynik, domyślnie wyrażony w bajtach, poddawany jest konwersji na megabajty poprzez podzielenie przez $1024^2$. Cykl profilowania kończy się wywołaniem \kod{tracemalloc.stop()}, co skutecznie czyści bufory monitorujące i zwalnia zasoby systemowe przypisane do analizatora.
+
+\section{Szczegóły implementacyjne i dobór hiperparametrów modeli do procesu uczenia}
 Zrozumienie działania badanych algorytmów wymaga analizy ich implementacji w kodzie oraz uzasadnienia doboru kluczowych hiperparametrów. Poniżej przedstawiono szczegółowy opis konfiguracji każdego z modeli wraz z listingami najważniejszych fragmentów kodu.
 \subsection{Powtarzalność wyników badań}
 We wszystkich implementowanych modelach oraz funkcjach podziału zbioru danych zastosowano stałe ziarno losowości \kod{random\_state=42} (lub \kod{seed=42} dla biblioteki river). W uczeniu maszynowym inicjalizacja wag sieci neuronowych, losowanie cech w drzewach decyzyjnych czy mieszanie próbek opierają się na generatorach liczb pseudolosowych. Ustawienie stałego ziarna, w tym przypadku popularnej w środowisku programistycznym liczby 42, jest kluczową praktyką badawczą. Gwarantuje to determinizm eksperymentu, czyli pozwala na dokładne i sprawiedliwe porównanie czasów wykonania oraz metryk F1-Score na różnych platformach sprzętowych, mając pewność, że na każdym urządzeniu zainicjalizowano matematycznie identyczny model.
@@ -266,23 +322,12 @@ Funkcja score one wylicza wynik na podstawie tego, jak wiele normalnych próbek 
 \end{enumerate}
 Następnie liczony jest próg anomalii thershold. Używana jest funkcja percentyla, która sortuje wszystkie liczby w tablicy od najmniejszego do największego. Próg zostaje ustawiony w takim miejscu, że 98.8\% wszystkich normalnych odczytów znalazło się poniżej niego. Pozostałe 1.2\% wyników (najwyższe błedy w zbiorze normalnym) jest traktowanej jako anomalia.
 
-\section{Metodyka przygotowania danych oraz profilowania wydajnościowego}
-\subsection{Akwizycja i preprocessing danych telemetrycznych}
-Eksperymenty przeprowadzono z wykorzystaniem zbioru Pump sensor data, zawierającego wielowymiarowe szeregi czasowe z 52 czujników przemysłowych, rejestrowane z częstotliwością jednej minuty. W pierwszej fazie preprocessingu dokonano selekcji cech, odrzucając metadane niebędące odczytami fizycznymi (znacznik czasu, indeks, tekstowa etykieta statusu).
+\section{Proces klasyfikacji i detekcji na zbiorze testowym}
+Po ustaleniu granicy decyzyjnej (threshold) na podstawie danych treningowych, system przechodzi do docelowego etapu klasyfikacji na niewidzianym wcześniej zbiorze testowym. Ewaluacja ta przebiega symetrycznie do fazy uczenia. W pierwszej kolejności modele analizują nowe próbki i generują surowe miary odchyleń, np. błędy rekonstrukcji, długości ścieżek drzew binarnych, które są agregowane w wektorze wynikowym o nazwie \kod{test\_scores}.
 
-Ze względu na niekompletność strumienia danych (szczególnie zauważalną w przypadku sensora nr 15), zastosowano kaskadową strategię imputacji braków. W pierwszej kolejności wykorzystano metodę propagacji ostatniej znanej wartości w przód (ang. forward fill), następnie w tył (backward fill), a wszelkie rezydualne braki zastąpiono zerami.
+Następnie implementowana jest właściwa logika detekcyjna. Każda wyestymowana wartość numeryczna z wektora testowego poddawana jest weryfikacji relacyjnej względem wcześniej wyliczonego progu anomalii. Algorytm aplikuje na zbiorze warunek boolowskim, jeśli wynik punktowy danej próbki jest ostro większy niż założony próg, operacja zwraca wartość logiczną \kod{True}. Jeśli natomiast odchylenie jest mniejsze lub równe wartości progowej, układ interpretuje to jako pracę w normie, zwracając \kod{False}.
 
-Proces binaryzacji etykiet przekształcił problem w zadanie klasyfikacji dwuklasowej:
-\begin{itemize}[label={--},labelsep=0.4cm,leftmargin=0.6cm]
-\item Stan NORMAL (poprawna praca układu) zamapowano jako 0,
-\item Stany awaryjne BROKEN oraz przejściowe RECOVERING zagregowano do wspólnej klasy anomalii oznaczonej jako 1.
-\end{itemize}
-
-Podziału na zbiór treningowy (70\%) i testowy (30\%) dokonano z rygorystycznym zachowaniem chronologii szeregu czasowego. Wyłączenie tasowania próbek było krytyczne, aby zapobiec wyciekowi danych z przyszłości do zbioru uczącego. Indeksy podziału utrwalono w plikach train.txt i test.txt, gwarantując pełną reprodukowalność eksperymentów dla różnych algorytmów.
-
-Następnie surowe odczyty poddano normalizacji za pomocą transformacji MinMaxScaler, skalując przestrzeń cech do przedziału $[0, 1]$. Standaryzacja ta jest niezbędnym warunkiem stabilnej konwergencji sieci neuronowych (Autoenkoderów). W ostatnim kroku, bazując na paradygmacie uczenia nienadzorowanego, na zbiór treningowy nałożono maskę logiczną, filtrując wyłącznie odczyty zdrowej maszyny. Dzięki temu algorytmy modelowały wyłącznie profil "normy", kwalifikując wszelkie odchylenia w fazie testowej jako anomalię.
-
-\subsection{Profilowanie zasobów sprzętowych i termicznych}
+W celu ujednolicenia formatu danych z matematycznymi standardami ewaluacji (wymaganymi do wyliczenia macierzy pomyłek oraz metryk precyzji), uzyskany wektor logiczny jest natychmiastowo poddawany rzutowaniu typów. Za pomocą wbudowanej metody konwersji (\kod{.astype(int)}), wartości logiczne zamieniane są na reprezentację całkowitoliczbową. W rezultacie powstaje finalna tablica predykcji o nazwie \kod{pred\_labels\_test}. Składa się ona wyłącznie z wartości binarnych, zera (0) oznaczającego poprawny stan maszyny (NORMAL) oraz jedynki (1) jednoznacznie wskazującej na zidentyfikowaną usterkę (ANOMALIA). Tablica ta stanowi bezpośredni materiał wejściowy do oceny skuteczności klasyfikacyjnej sprzętu.
 
 
 \section{Wyniki detekcji i parametry wydajnościowe}
