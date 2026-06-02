@@ -1,4 +1,4 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% %
 %%% % weiiszablon.tex
 %%% % The Faculty of Electrical and Computer Engineering
@@ -46,13 +46,10 @@
 % strona tytułowa
 \maketitle
 
-\blankpage
-
 % spis treści
 \tableofcontents
 
 \clearpage
-\blankpage
 
 
 \section{Wstęp i cel projektu}
@@ -70,48 +67,53 @@ Aby w pełni zbadać wpływ architektury sprzętowej na wydajność przetwarzani
 Jako sprzętowy punkt odniesienia wykorzystano wysokowydajny komputer osobisty Lenovo LOQ. Architektura ta reprezentuje w projekcie klasyczne serwery chmurowe. Wykorzystanie procesora w architekturze x86\_64, zasilania sieciowego oraz aktywnego układu chłodzenia eliminuje wszelkie ograniczenia związane z dławieniem termicznym oraz oszczędzaniem energii. Głównym celem implementacji algorytmów na tym urządzeniu było wyznaczenie maksymalnej, teoretycznej przepustowości potoku danych dla użytych bibliotek w języku Python. Wyniki z PC stanowią "złoty standard", pozwalający na precyzyjne zmierzenie, jak duży narzut wydajnościowy w postaci opóźnień lub spadku liczby operacji na sekundę pociąga za sobą przeniesienie kodu na energooszczędne urządzenia brzegowe z rodziny ARM.
 
 \subsection{Komputer jednopłytkowy Raspberry Pi 5}
-W segmencie urządzeń brzegowych ogólnego przeznaczenia badaniom poddano Raspberry Pi 5. W nowoczesnych topologiach Przemysłu 4.0 tego typu minikomputery pełnią zazwyczaj funkcję bramek brzegowych (IoT Gateways), agregując i filtrując dane bezpośrednio z maszyn. Wybór tej platformy podyktowany był chęcią sprawdzenia, jak "surowa", wysokotaktowana architektura ARM Cortex-A76 bez wbudowanych, dedykowanych akceleratorów sztucznej inteligencji radzi sobie ze skomplikowanymi, wielowątkowymi obciążeniami matematycznymi w języku Python. Platforma ta posłużyła do oceny balansu między przystępnością cenową i uniwersalnością sprzętu, a jego realną przepustowością w zadaniach klasycznej analizy danych.
+W segmencie urządzeń brzegowych ogólnego przeznaczenia badaniom poddano Raspberry Pi 5. W nowoczesnych topologiach Przemysłu 4.0 tego typu minikomputery pełnią zazwyczaj funkcję bramek brzegowych (IoT Gateways), agregując i filtrując dane bezpośrednio z maszyn. Wybór tej platformy podyktowany był chęcią sprawdzenia, jak "surowa", wysokotaktowana architektura ARM Cortex-A76 bez wbudowanych, dedykowanych akceleratorów sztucznej inteligencji radzi sobie ze skomplikowanymi, wielowątkowymi obciążeniami matematycznymi w języku Python. Platforma ta posłużyła do oceny balansu między przystępnością cenową i uniwersalnością sprzętu, a jego realną przepustowością w zadaniach klasycznej analizy danych \cite{rpi5specs}.
 
 \subsection{NVIDIA Jetson Orin Nano (Edge AI)}
-Trzecim środowiskiem testowym był moduł NVIDIA Jetson Orin Nano. W przeciwieństwie do Raspberry Pi, jest to urządzenie wysoce wyspecjalizowane, zaprojektowane od podstaw dla systemów autonomicznych i przemysłowych, gdzie priorytetem jest niezawodność procesora oraz dostęp do zunifikowanej pamięci operacyjnej współdzielonej między CPU i GPU. Jetson został wybrany do zestawienia jako reprezentant układów ukierunkowanych na sztuczną inteligencję. Ewaluacja na tym urządzeniu miała charakter krytyczny. Jej celem było zbadanie, jak asymetryczna architektura sprzętowa, oparta na wolniej taktowanym, ale bezpiecznym procesorze z rodziny Safety Ready oraz potężnym GPU, reaguje na obciążenie klasycznymi algorytmami CPU-bound jak drzewa decyzyjne z pakietu scikit-learn czy river, których kod źródłowy uniemożliwia wydelegowanie operacji na rdzenie CUDA.
+Trzecim środowiskiem testowym był moduł NVIDIA Jetson Orin Nano. W przeciwieństwie do Raspberry Pi, jest to urządzenie wysoce wyspecjalizowane, zaprojektowane od podstaw dla systemów autonomicznych i przemysłowych, gdzie priorytetem jest niezawodność procesora oraz dostęp do zunifikowanej pamięci operacyjnej współdzielonej między CPU i GPU. Jetson został wybrany do zestawienia jako reprezentant układów ukierunkowanych na sztuczną inteligencję. Ewaluacja na tym urządzeniu miała charakter krytyczny. Jej celem było zbadanie, jak asymetryczna architektura sprzętowa, oparta na wolniej taktowanym, ale bezpiecznym procesorze z rodziny Safety Ready oraz potężnym GPU, reaguje na obciążenie klasycznymi algorytmami CPU-bound jak drzewa decyzyjne z pakietu scikit-learn czy river, których kod źródłowy uniemożliwia wydelegowanie operacji na rdzenie CUDA \cite{jetsonspecs}.
 
 \subsection{Mikrokontroler ESP32 – Warstwa czujnikowa (Deep Edge)}
 
+Ostatnim, a zarazem najbardziej ograniczonym sprzętowo środowiskiem był mikrokontroler ESP32. W architekturach Internetu Rzeczy (IoT) układy tego typu reprezentują tzw. głęboki brzeg sieci (Deep Edge), pełniąc zazwyczaj rolę węzłów czujnikowych. W przeciwieństwie do wcześniej opisanych platform minikomputerowych, ESP32 nie dysponuje pełnoprawnym systemem operacyjnym ani gigabajtami pamięci współdzielonej, operując zasobami RAM rzędu zaledwie kilkuset kilobajtów oraz niskotaktowanym mikrokontrolerem.
+Włączenie tego urządzenia do zestawienia miało na celu weryfikację limitów optymalizacji oprogramowania oraz możliwości wdrożenia paradygmatu TinyML (uczenia maszynowego na mikrokontrolerach). ESP32 posłużył do przetestowania dedykowanego mechanizmu przeniesienia modeli, wyuczonych uprzednio w środowisku PC w postaci surowych struktur danych wyeksportowanych do pamięci stałej (Flash) mikrokontrolera.
+
+
 \section{Analiza i porównanie platform sprzętowych oraz architektur procesorów}
-Kluczowym elementem oceny wydajności algorytmów na różnych platformach (Edge vs. PC) jest dogłębna analiza ich specyfikacji sprzętowej. Do badań wykorzystano trzy zróżnicowane urządzenia: klasyczny komputer osobisty pełniący rolę punktu odniesienia, wszechstronny komputer jednopłytkowy Raspberry Pi 5 oraz wysoce wyspecjalizowany moduł sztucznej inteligencji NVIDIA Jetson Orin Nano. Zestawienie podstawowych parametrów badanych procesorów przedstawiono w Tabeli \ref{tab:cpu}.
+Kluczowym elementem oceny wydajności algorytmów na różnych platformach (Edge vs. PC) jest dogłębna analiza ich specyfikacji sprzętowej. W niniejszym projekcie zastosowano asymetryczny podział zadań, co wymusiło ewaluację urządzeń w dwóch odmiennych kontekstach operacyjnych. Do fazy trenowania i profilowania modeli (wymagającej znacznych zasobów RAM i mocy obliczeniowej) wykorzystano trzy urządzenia: klasyczny komputer osobisty pełniący rolę punktu odniesienia, wszechstronny komputer jednopłytkowy Raspberry Pi 5 oraz wysoce wyspecjalizowany moduł sztucznej inteligencji NVIDIA Jetson Orin Nano. Z kolei do fazy czystego wnioskowania (ang. \textit{inference}) włączono skrajnie ograniczony zasobowo mikrokontroler z rodziny ESP32. Zestawienie podstawowych parametrów badanych procesorów przedstawiono w Tabeli \ref{tab:cpu}. \cite{rpi5specs}\cite{jetsonspecs}\cite{amdspecs}\cite{esp32}
 
 \begin{table}[htpb]
     \centering
     \caption{Zestawienie parametrów technicznych wykorzystanych platform obliczeniowych}
     \label{tab:cpu}
     \renewcommand{\arraystretch}{1.3} % Zwiększa odstępy między wierszami dla lepszej czytelności
-\begin{tabular}{|p{3cm}|p{3.5cm}|p{4.2cm}|p{3.5cm}|}
+    % Zmodyfikowane szerokości kolumn, aby pomieścić 5 elementów na stronie formatu A4
+    \begin{tabular}{|p{2.5cm}|p{2.8cm}|p{3.5cm}|p{3.0cm}|p{2.5cm}|}
         \hline
-        \textbf{Cecha} & \textbf{Raspberry Pi 5} & \textbf{NVIDIA Jetson Orin Nano} & \textbf{PC (Lenovo LOQ)} \\ 
+        \textbf{Cecha} & \textbf{Raspberry Pi 5} & \textbf{NVIDIA Jetson Orin Nano} & \textbf{PC (Lenovo LOQ)} & \textbf{ESP32-WROOM} \\ 
         \hline
-        \textbf{Model procesora} & Broadcom BCM2712 & Niestandardowy układ SoC NVIDIA & AMD Ryzen 7 7435HS \\ 
+        \textbf{Model procesora} & Broadcom BCM2712 & Niestandardowy układ SoC NVIDIA & AMD Ryzen 7 7435HS & Espressif ESP32 \\ 
         \hline
-        \textbf{Architektura} & Arm Cortex-A76 (64-bit) & Arm Cortex-A78AE (64-bit) & x86\_64 (Zen 3+) \\ 
+        \textbf{Architektura} & Arm Cortex-A76 (64-bit) & Arm Cortex-A78AE (64-bit) & x86\_64 (Zen 3+) & Xtensa LX6 (32-bit) \\ 
         \hline
-        \textbf{Rdzenie / Wątki} & 4 / 4 & 6 / 6 & 8 / 16 \\ 
+        \textbf{Rdzenie / Wątki} & 4 / 4 & 6 / 6 & 8 / 16 & 2 / 2 \\ 
         \hline
-        \textbf{Taktowanie} & 2,4 GHz & 1,5 GHz & 3,1 GHz (Boost do 4,5 GHz) \\ 
+        \textbf{Taktowanie} & 2,4 GHz & 1,5 GHz & 3,1 GHz (Boost do 4,5 GHz) & 240 MHz \\ 
         \hline
-        \textbf{Pamięć RAM} & 4GB LPDDR4X & 8GB LPDDR5 (zintegrowana) & Obsługa DDR5 (niezależna) \\ 
+        \textbf{Pamięć RAM} & 4GB LPDDR4X & 8GB LPDDR5 (zintegrowana) & Obsługa DDR5 (niezależna) & 520 KB SRAM \\ 
         \hline
-        \textbf{Pobór mocy (TDP)} & Bardzo niski (ok. 5-12W) & Niski (konfigurowalny 7W - 15W) & Wysoki (45W+) \\ 
+        \textbf{Pobór mocy (TDP)} & Bardzo niski (ok. 5-12W) & Niski (konfigurowalny 7W - 15W) & Wysoki (45W+) & Skrajnie niski ($<$ 1W) \\ 
         \hline
     \end{tabular}
 \end{table}
 
-Porównywane platformy sprzętowe reprezentują trzy zupełnie odmienne filozofie projektowania mikroprocesorów, co bezpośrednio determinuje ich potencjał obliczeniowy oraz obszary zastosowań. Podstawowe różnice można sprowadzić do dwóch głównych kategorii: surowej wydajności obliczeniowej oraz mechanizmów zapewniających bezpieczeństwo i niezawodność.
+Porównywane platformy sprzętowe reprezentują cztery zupełnie odmienne filozofie projektowania układów, co bezpośrednio determinuje ich potencjał obliczeniowy oraz obszary zastosowań. Zasadnicze różnice obejmują surową wydajność obliczeniową niezbędną do uczenia maszynowego oraz mechanizmy zapewniające bezpieczeństwo i niezawodność.
 
 \subsection{Wydajność obliczeniowa i architektura rdzeni}
 Pod względem czystej specyfikacji technicznej najwyższym potencjałem dysponuje procesor AMD Ryzen 7 7435HS. Jest to rozbudowany układ oparty na architekturze x86\_64 (mikroarchitektura Zen 3+ Rembrandt R), wyposażony w 8 rdzeni fizycznych z obsługą 16 wątków. Charakteryzuje się on najszybszym zegarem, taktowanie bazowe wynosi 3,1 GHz, a w trybie Boost osiąga 4,5 GHz. Architekturę tę wspiera niezwykle pojemna hierarchia pamięci podręcznej (16 MB współdzielonej pamięci L3 oraz 4 MB pamięci L2), co predysponuje ten układ do błyskawicznego przetwarzania dużych wolumenów danych.
 
 W segmencie urządzeń wbudowanych (ARM) różnice są równie istotne. Komputer jednopłytkowy Raspberry Pi 5 opiera się na układzie Broadcom BCM2712 z 4-rdzeniowym procesorem Arm Cortex-A76. Dzięki taktowaniu na poziomie 2,4 GHz oraz 2 MB współdzielonej pamięci L3, architektura ta oferuje 2- do 3-krotny wzrost wydajności względem poprzedniej generacji platformy, stanowiąc bardzo wydajną jednostkę ogólnego przeznaczenia.
 
-Z kolei NVIDIA Jetson Orin Nano (w wariancie 8 GB RAM) wykorzystuje 6-rdzeniowy procesor w nowszej architekturze Arm Cortex-A78AE. Choć jego taktowanie wynosi zaledwie 1,5 GHz, sama struktura rdzenia A78AE oferuje o 30% wyższą wydajność przetwarzania instrukcji na cykl w stosunku do starszych generacji układów ARM. Projektanci firmy NVIDIA postawili w tym przypadku na ekstremalną efektywność energetyczną oraz zoptymalizowanie potoku pod kątem równoległych operacji sztucznej inteligencji, świadomie rezygnując z wysokich częstotliwości taktowania rdzeni CPU.
+Z kolei NVIDIA Jetson Orin Nano (w wariancie 8 GB RAM) wykorzystuje 6-rdzeniowy procesor w nowszej architekturze Arm Cortex-A78AE. Choć jego taktowanie wynosi zaledwie 1,5 GHz, sama struktura rdzenia A78AE oferuje o 30 wyższą wydajność przetwarzania instrukcji na cykl w stosunku do starszych generacji układów ARM. Projektanci firmy NVIDIA postawili w tym przypadku na ekstremalną efektywność energetyczną oraz zoptymalizowanie potoku pod kątem równoległych operacji sztucznej inteligencji, świadomie rezygnując z wysokich częstotliwości taktowania rdzeni CPU.
 
 \subsection{Niezawodność i bezpieczeństwo sprzętowe}
 Analizowane układy różnią się drastycznie pod kątem mechanizmów bezpieczeństwa, co wynika z ich rynkowego przeznaczenia:
@@ -120,6 +122,11 @@ Analizowane układy różnią się drastycznie pod kątem mechanizmów bezpiecze
 	\item \textbf{Zen 3+ (AMD Ryzen)} -- Architektura ta skupia się przede wszystkim na stabilności i inteligentnym zarządzaniu energią w ekosystemach serwerowych i konsumenckich, wprowadzając ponad 50 nowych stanów zasilania względem poprzedniej generacji.
 	\item \textbf{Cortex-A76 (Raspberry Pi 5)} -- Oferuje sprzętowe rozszerzenia kryptograficzne, które znacząco przyspieszają szyfrowanie strumieni danych (np. SSL/TLS). Stanowi to doskonałe zabezpieczenie dla standardowych aplikacji sieciowych, jednak sam procesor nie posiada certyfikacji ani mechanizmów nadmiarowych (jak Jetson) pozwalających na użycie go w krytycznych systemach podtrzymujących funkcje życiowe lub sterujących autonomicznymi pojazdami.
 \end{enumerate}
+
+\subsection{Architektura mikrokontrolera ESP32 w roli wyłącznie jednostki wnioskującej}
+Całkowicie odrębną klasę sprzętu reprezentuje układ SoC Espressif ESP32, stanowiący w projekcie platformę docelową dla wyuczonych algorytmów (urządzenie wykonawcze). Został on zaprojektowany w oparciu o 32-bitową mikroarchitekturę Tensilica Xtensa Dual-Core 32-bit LX6. Brak wbudowanej jednostki zarządzania pamięcią (MMU) typowej dla układów ARM/x86 oraz zaledwie 520 KB wbudowanej pamięci SRAM uniemożliwia uruchomienie pełnoprawnego systemu operacyjnego Linux i środowiska Python, dyskwalifikując układ z zadań treningowych.
+
+Jednakże, dzięki dwóm rdzeniom taktowanym zegarem do 240 MHz, sprzętowej jednostce zmiennoprzecinkowej (FPU) realizującej instrukcje w pojedynczej precyzji oraz mechanizmom bezpośredniego mapowania pamięci stałej Flash do przestrzeni adresowej procesora (Flash cache), architektura Xtensa jest w stanie błyskawicznie wykonywać operacje mnożenia macierzy oraz iterować przez struktury drzew decyzyjnych w języku C/C++. Taka budowa czyni ESP32 optymalną architekturą brzegową do oceny i predykcji po stronie czujnika (Deep Edge) \cite{esp32}.
 
 \section{Podstawy teoretyczne wykorzystanych algorytmów detekcji anomalii}
 W ramach niniejszego projektu do detekcji anomalii wykorzystano trzy algorytmy reprezentujące odmienne paradygmaty uczenia maszynowego: sieci neuronowe oparte na rekonstrukcji sygnału, klasyczne metody zespołowe oparte na drzewach decyzyjnych oraz algorytmy strumieniowe.
@@ -131,17 +138,17 @@ Autoenkoder to specyficzny rodzaj sztucznej sieci neuronowej, którego celem jes
     \label{eq:mse}
 \end{equation}
 
-Jak wykazali Chandola i in. w klasycznym przeglądzie literatury dotyczącym detekcji anomalii (Anomaly Detection: A Survey, 2009), modele oparte na rekonstrukcji są niezwykle skuteczne w przypadku danych wielowymiarowych. Znajdują one szerokie zastosowanie w analizie sygnałów z wielu zintegrowanych sensorów przemysłowych, gdzie kluczowe jest wychwycenie skomplikowanych, nieliniowych zależności pomiędzy poszczególnymi czujnikami, które są trudne do zamodelowania tradycyjnymi metodami statystycznymi.
+Jak wykazali Chandola i in. w klasycznym przeglądzie literatury dotyczącym detekcji anomalii \cite{anomalysurvey}, modele oparte na rekonstrukcji są niezwykle skuteczne w przypadku danych wielowymiarowych. Znajdują one szerokie zastosowanie w analizie sygnałów z wielu zintegrowanych sensorów przemysłowych, gdzie kluczowe jest wychwycenie skomplikowanych, nieliniowych zależności pomiędzy poszczególnymi czujnikami, które są trudne do zamodelowania tradycyjnymi metodami statystycznymi.
 
 \subsection{Isolation forest}
 Algorytm Lasu Izolacyjnego różni się fundamentalnie od większości metod detekcji, które starają się najpierw zdefiniować profil normalności, a następnie szukają odchyleń od tej normy. Metoda ta skupia się na bezpośrednim odizolowaniu anomalii. Algorytm buduje zespół losowych drzew binarnych. W każdym kroku losowo wybierana jest cecha, np. odczyt z konkretnego czujnika, a następnie losowo dobierany jest punkt podziału pomiędzy minimalną a maksymalną wartością tej cechy. Z racji tego, że anomalie są z definicji nieliczne i odmienne, wymagają one znacznie mniejszej liczby podziałów, aby zostać odizolowanymi od reszty zbioru danych w pojedynczym liściu drzewa. W związku z tym, ścieżka od korzenia do liścia dla anomalii jest znacznie krótsza niż dla normalnych próbek. Ocena anomalii dla każdego punktu danych jest wyliczana na podstawie średniej długości ścieżki we wszystkich wygenerowanych drzewach.
 
-Zaproponowany przez autorów Liu, Tinga i Zhou (Isolation Forest, 2008) algorytm charakteryzuje się liniową złożonością czasową oraz niskim zapotrzebowaniem na pamięć operacyjną. Ponieważ nie opiera się na obliczaniu odległości czy gęstości, świetnie sprawdza się w wielowymiarowych zbiorach danych. Jest szeroko stosowany w cyberbezpieczeństwie oraz diagnostyce maszyn przy przetwarzaniu wsadowym, będąc wysoce odpornym na szum w danych treningowych.
+Zaproponowany przez autorów Liu, Tinga i Zhou \cite{isoforest} algorytm charakteryzuje się liniową złożonością czasową oraz niskim zapotrzebowaniem na pamięć operacyjną. Ponieważ nie opiera się na obliczaniu odległości czy gęstości, świetnie sprawdza się w wielowymiarowych zbiorach danych. Jest szeroko stosowany w cyberbezpieczeństwie oraz diagnostyce maszyn przy przetwarzaniu wsadowym, będąc wysoce odpornym na szum w danych treningowych.
 
 \subsection{Half-Space Trees}
 Algorytm Half-Space Trees to nowsze podejście oparte na strukturach drzewiastych, jednak zaprojektowane od podstaw do pracy w środowisku strumieniowym. W przeciwieństwie do standardowych algorytmów wsadowych, które wymagają wczytania całego zbioru danych do pamięci, HS-Trees uczy się inkrementalnie próbka po próbce. Algorytm tworzy zbiór drzew losowych, gdzie każda przestrzeń cech jest dzielona na równe półprzestrzenie, stąd nazwa Half-Space. Przechodzące przez system dane aktualizują liczniki w węzłach drzew. Model ten często wykorzystuje mechanizm okna czasowego, dzięki czemu starsze dane są zapominane, a algorytm adaptuje się do zmieniającego się w czasie profilu normalnego zachowania maszyny. Próbka, która trafia do węzła o bardzo niskim liczniku wystąpień w danym oknie czasowym, otrzymuje wysoką punktację anomalii.
 
-Jak udowodniono w pracy twórców algorytmu (Tan, Ting i Liu, Fast Anomaly Detection for Streaming Data, 2011), HS-Trees to rozwiązanie dedykowane dla środowisk, w których dane napływają w sposób ciągły z dużą prędkością, a zasoby obliczeniowe i pamięciowe są ograniczone. Ze względu na swój stały czas aktualizacji i minimalny odcisk w pamięci RAM, algorytm ten jest idealnym kandydatem do zastosowań w ekosystemach Internetu Rzeczy oraz platformach brzegowych, gdzie urządzenia takie jak Raspberry Pi muszą dokonywać predykcji w czasie rzeczywistym na bezpośrednich odczytach z maszyn.
+Jak udowodniono w pracy twórców algorytmu \cite{fastanomalydetection}, HS-Trees to rozwiązanie dedykowane dla środowisk, w których dane napływają w sposób ciągły z dużą prędkością, a zasoby obliczeniowe i pamięciowe są ograniczone. Ze względu na swój stały czas aktualizacji i minimalny odcisk w pamięci RAM, algorytm ten jest idealnym kandydatem do zastosowań w ekosystemach Internetu Rzeczy oraz platformach brzegowych, gdzie urządzenia takie jak Raspberry Pi muszą dokonywać predykcji w czasie rzeczywistym na bezpośrednich odczytach z maszyn.
 
 \section{Przygotowanie środowiska uruchomieniowego Python na platformie Raspberry Pi}
 Podczas konfiguracji platformy Raspberry Pi napotkano na trudności związane z instalacją bibliotek projektowych za pomocą globalnego menedżera pakietów pip. Próby te kończyły się krytycznym błędem informującym o "środowisku zarządzanym zewnętrznie", co jest bezpośrednim wynikiem rygorystycznego wdrożenia standardu PEP 668 w najnowszych systemach operacyjnych opartych na architekturze Debian. Standard ten wprowadzono w celu eliminacji konfliktów zależności pomiędzy systemowym instalatorem apt, a menedżerem pakietów języka Python. Ponieważ współczesne dystrybucje Linuksa opierają stabilność swoich wewnętrznych usług na konkretnych wersjach bibliotek Pythona, modyfikacja globalnej przestrzeni nazw przez użytkownika mogłaby doprowadzić do awarii całego systemu. W odpowiedzi na wykrycie znacznika EXTERNALLY-MANAGED w systemowym katalogu, narzędzie pip celowo blokuje instalację, wymuszając tym samym stosowanie bezpieczniejszych praktyk inżynierii oprogramowania.
@@ -180,10 +187,15 @@ W ramach pogłębionej diagnostyki i wykluczenia ewentualnych błędów konfigur
 
 Zjawisko braku możliwości wykonania algorytmów na GPU udowadnia, że przeniesienie projektu na platformę brzegową wymaga ścisłego doboru technologii oprogramowania. Klasyczne uczenie maszynowe w języku Python pozostaje w dużej mierze domeną procesorów. Próba wymuszenia akceleracji sprzętowej na platformie ARM dla algorytmów niebędących głębokimi sieciami neuronowymi napotyka na nieprzezwyciężone w standardowy sposób bariery w samym kodzie źródłowym dostępnych bibliotek.
 
+\section{Wdrożenie algorytmów na mikrokontrolerze ESP32 – asymetryczny podział zadań}
+Próba bezpośredniego uruchomienia zaawansowanych skryptów analitycznych na mikrokontrolerze ESP32 napotyka na bariery sprzętowe i programowe. Układ ten dysponuje zaledwie 520 KB wbudowanej pamięci operacyjnej SRAM oraz architekturą pozbawioną zaawansowanej jednostki zarządzania pamięcią MMU. Ograniczenia te uniemożliwiły w przypadku niniejszego projektu instalację pełnoprawnego systemu operacyjnego, a w konsekwencji – uruchomienie standardowego interpretera języka Python wraz z bibliotekami matematycznymi, takimi jak \textit{scikit-learn} czy \textit{river}. Wykorzystanie alternatywnych, odchudzonych środowisk pokroju MicroPython również nie było rozwiązaniem problemu. Nie wspierają one skomplikowanych frameworków uczenia maszynowego, a minimalna ilość pamięci RAM nie pozwala na wczytanie obszernych, historycznych zbiorów danych treningowych. Z tego względu przeprowadzenie pełnego cyklu uczenia modeli bezpośrednio na warstwie czujnikowej było niemożliwe do zrealizowania w ramach projektu przez problemy architektonicznie.
+
+Aby zrealizować cel projektu i wdrożyć sztuczną inteligencję na najniższym poziomie sprzętowym, konieczne było zastosowanie paradygmatu TinyML, opierającego się na ścisłym, asymetrycznym podziale zadań. Kosztowną obliczeniowo fazę profilowania i uczenia algorytmów oddelegowano do środowiska referencyjnego PC w całości. Następnie, aby przenieść uzyskaną wiedzę na mikrokontroler, konieczne było całkowite porzucenie środowiska Python na rzecz kompilowanego języka C/C++. Wyuczone w Pythonie modele zostały wyekstrahowane z dynamicznych struktur obiektowych do postaci płaskich, statycznych tablic danych jako macierze wag dla sieci neuronowych oraz zbiory struktur węzłów dla drzew decyzyjnych. Zapisano je w plikach nagłówkowych (format \texttt{.h}) i wkompilowano bezpośrednio do pamięci stałej Flash układu ESP32. W rezultacie mikrokontroler nie buduje modeli matematycznych od podstaw. ESP32 w ramach projektu realizuje wyłącznie fazę wnioskowania (ang. \textit{inference}). Mechanizm ten, polegający na przepuszczaniu nowych sygnałów z czujników przez z góry zdefiniowane reguły i tablice wag za pomocą podstawowych operacji arytmetycznych, pozwala na szybkie i deterministyczne wykrywanie anomalii przy niewielkim zużyciu zasobów. Pozwoliło to na całkowite ominięcie problem braku środowiska Python na urządzeniu docelowym.
+
 \section{Charakterystyka wykorzystanego zbioru danych}
-Do celów badawczych, treningu oraz ewaluacji zaimplementowanych algorytmów wykorzystano ogólnodostępny zbiór danych Pump Sensor Data udostępniony na platformie Kaggle. Reprezentuje on rzeczywiste, historyczne odczyty parametrów pracy przemysłowej pompy wodnej zlokalizowanej w niewielkiej miejscowości. Zbiór ten stanowi klasyczny przykład danych typu Internet of Things pochodzących z systemów SCADA, co czyni go idealnym fundamentem do symulacji obciążeń na platformach brzegowych. Struktura zbioru podizelona jest na trzy główne grupy informacyjne.
+Do celów badawczych, treningu oraz ewaluacji zaimplementowanych algorytmów wykorzystano ogólnodostępny zbiór danych Pump Sensor Data udostępniony na platformie Kaggle \cite{kaggledata}. Reprezentuje on rzeczywiste, historyczne odczyty parametrów pracy przemysłowej pompy wodnej zlokalizowanej w niewielkiej miejscowości. Zbiór ten stanowi klasyczny przykład danych typu Internet of Things pochodzących z systemów SCADA, co czyni go idealnym fundamentem do symulacji obciążeń na platformach brzegowych. Struktura zbioru podizelona jest na trzy główne grupy informacyjne.
 \subsection{Przestrzeń czasowa (Timestamp Data)}
-Zbiór określa dokładny moment wykonania każdego pomiaru. Odczyty ze wszystkich czujników były rejestrowane synchronicznie w stałych, jednominutowych interwałach. Taka ziarnistość pozwala na traktowanie zgromadzonych informacji jako wielowymiarowych szeregów czasowych. Dzięki precyzyjnym znacznikom czasowym możliwe jest sekwencyjne odtwarzanie danych w pętli programu, symulując strumieniowanie w czasie rzeczywistym dla algorytmu Half-Space Trees oraz prowadzenie analizy trendów środowiskowych poprzedzających wystąpienie awarii.
+Zbiór określa dokładny moment wykonania każdego pomiaru. Odczyty ze wszystkich czujników były rejestrowane synchronicznie w stałych, jednominutowych interwałach. Obejmują one okres 153 dni pracy pompy, co łącznie przekłada się na potężną bazę liczącą 220 320 unikalnych rekordów. Taka ziarnistość pozwala na traktowanie zgromadzonych informacji jako wielowymiarowych szeregów czasowych. Dzięki precyzyjnym znacznikom czasowym możliwe jest sekwencyjne odtwarzanie danych w pętli programu, symulując strumieniowanie w czasie rzeczywistym dla algorytmu Half-Space Trees oraz prowadzenie analizy trendów środowiskowych poprzedzających wystąpienie awarii.
 \subsection{Przestrzeń atrybutów fizycznych (Sensor Data)}
 Główną część zbioru stanowią surowe odczyty fizyczne z urządzenia. Baza zawiera 52 niezależne serie danych pochodzące z oddzielnych jednostek sensorowych maszyny, oznaczonych odpowiednio od sensor\_00 do sensor\_51. Ponieważ są to wartości surowe, prosto z systemów pomiarowych, charakteryzują się one obecnością naturalnego szumu pomiarowego, wartości odstających oraz brakami w danych. Skrajnym przypadkiem jest zmienna sensor\_15, która składa się całkowicie z wartości pustych. Taka struktura bazy wymusiła w początkowym etapie przeprowadzania badań zastosowanie mechanizmów wstępnego przetwarzania danych, w tym imputacji braków metodami propagacji wartości  oraz standaryzacji zakresów za pomocą algorytmu MinMaxScaler.
 \subsection{Zmienna celu}
@@ -247,9 +259,9 @@ Do monitorowania aktywności jednostki obliczeniowej wykorzystano zewnętrzną b
 Końcowy wskaźnik utylizacji procesora, prezentowany w raporcie podsumowującym, wyznaczany jest jako średnia arytmetyczna z pomiarów zarejestrowanych w etapach drugim i trzecim. Przyjęta metodyka gwarantuje miarodajną i obiektywną ocenę całkowitego kosztu obliczeniowego, jakiego wymagała kompleksowa realizacja głównej logiki detekcyjnej systemu.
 
 \subsection{Obserwacja alokacji pamięci RAM}
-Pomiary zużycia pamięci operacyjnej zrealizowano przy użyciu wbudowanej biblioteki \kod{tracemalloc}, która umożliwia precyzyjne śledzenie alokacji pamięci przez procesy środowiska Python. Proces monitorowania inicjowany jest wywołaniem funkcji \kod{tracemalloc.start()} bezpośrednio przed rozpoczęciem fazy treningowej modelu. Od tego momentu system rejestruje każdy zaalokowany blok pamięci, pozwalając na dokładne uchwycenie rzeczywistego narzutu pamięciowego algorytmu w trakcie jego pracy.
+Pomiary zużycia pamięci operacyjnej zrealizowano przy użyciu wbudowanej biblioteki \kod{tracemalloc}, która umożliwia precyzyjne śledzenie alokacji pamięci przez procesy środowiska Python. Proces monitorowania inicjowany jest poprzez wywołanie funkcji \texttt{tracemalloc.start()} bezpośrednio przed rozpoczęciem fazy treningowej modelu. Od tego momentu system rejestruje każdy zaalokowany blok pamięci, pozwalając na dokładne uchwycenie rzeczywistego narzutu pamięciowego algorytmu w trakcie jego pracy.
 
-Po sfinalizowaniu procesu uczenia wywoływana jest metoda tracemalloc.get\_traced\_memory(). Funkcja ta zwraca krotkę zawierającą dwie zmienne: zużycie bieżące oraz zużycie szczytowe. Do celów analitycznych ekstrahowana jest wyłącznie wartość szczytowa, ponieważ to ona determinuje maksymalne zapotrzebowanie modelu na zasoby, co stanowi parametr krytyczny przy wdrażaniu rozwiązań na urządzenia brzegowe o ograniczonej pojemności pamięci SRAM/RAM. Uzyskany wynik, domyślnie wyrażony w bajtach, poddawany jest konwersji na megabajty poprzez podzielenie przez $1024^2$. Cykl profilowania kończy się wywołaniem \kod{tracemalloc.stop()}, co skutecznie czyści bufory monitorujące i zwalnia zasoby systemowe przypisane do analizatora.
+Po sfinalizowaniu procesu uczenia następuje wywoływanie kolejnej metody o nazwie \kod{tracemalloc.get\_traced\_memory(}). Funkcja ta zwraca krotkę zawierającą dwie zmienne: zużycie bieżące oraz zużycie szczytowe. Do celów analitycznych ekstrahowana jest wyłącznie wartość szczytowa, ponieważ to ona determinuje maksymalne zapotrzebowanie modelu na zasoby, co stanowi parametr krytyczny przy wdrażaniu rozwiązań na urządzenia brzegowe o ograniczonej pojemności pamięci SRAM/RAM. Uzyskany wynik, domyślnie wyrażony w bajtach, poddawany jest konwersji na megabajty poprzez podzielenie przez $1024^2$. Cykl profilowania kończy się wywołaniem \kod{tracemalloc.stop()}, co skutecznie czyści bufory monitorujące i zwalnia zasoby systemowe przypisane do analizatora.
 
 \section{Szczegóły implementacyjne i dobór hiperparametrów modeli do procesu uczenia}
 Zrozumienie działania badanych algorytmów wymaga analizy ich implementacji w kodzie oraz uzasadnienia doboru kluczowych hiperparametrów. Poniżej przedstawiono szczegółowy opis konfiguracji każdego z modeli wraz z listingami najważniejszych fragmentów kodu.
@@ -329,6 +341,375 @@ Następnie implementowana jest właściwa logika detekcyjna. Każda wyestymowana
 
 W celu ujednolicenia formatu danych z matematycznymi standardami ewaluacji (wymaganymi do wyliczenia macierzy pomyłek oraz metryk precyzji), uzyskany wektor logiczny jest natychmiastowo poddawany rzutowaniu typów. Za pomocą wbudowanej metody konwersji (\kod{.astype(int)}), wartości logiczne zamieniane są na reprezentację całkowitoliczbową. W rezultacie powstaje finalna tablica predykcji o nazwie \kod{pred\_labels\_test}. Składa się ona wyłącznie z wartości binarnych, zera (0) oznaczającego poprawny stan maszyny (NORMAL) oraz jedynki (1) jednoznacznie wskazującej na zidentyfikowaną usterkę (ANOMALIA). Tablica ta stanowi bezpośredni materiał wejściowy do oceny skuteczności klasyfikacyjnej sprzętu.
 
+\section{Implementacja detekcji anomalii na module ESP32}
+
+W tym rozdziale przedstawiono wdrożenie algorytmów na docelowym mikrokontrolerze ESP32. Ze względu na ograniczenia sprzętowe, deficyt pamięci SRAM, wykluczono możliwość uruchomienia środowiska Python oraz ciężkich bibliotek analitycznych. Przyjęto założenie opracowania specyficznej reprezentacji modeli. Wiedza wyuczona w środowisku PC (wagi, obciążenia oraz parametry węzłów) została zmieniona do postaci statycznych tablic i ulokowana w pamięci Flash mikrokontrolera. Opracowano dedykowane funkcje w języku C/C++, których zadaniem jest odpakowanie tych struktur oraz przeprowadzenie wnioskowania opierając się na sprzętowych możliwościach mikroprocesora. Poniżej opisano zastosowane struktury danych oraz mechanikę działania poszczególnych algorytmów.
+
+\subsection{Struktura i reprezentacja wag modeli implementacyjnych}
+Podstawowym wyzwaniem wdrożenia modeli analitycznych na mikrokontrolerze ESP32 (dysponującym zaledwie 520 KB pamięci SRAM) jest konieczność wyeliminowania dynamicznej alokacji pamięci oraz struktur opartych na wskaźnikach, z których natywnie korzystają biblioteki w języku Python. Aby to osiągnąć, wyuczone na PC parametry modeli oraz współczynniki skalowania zostały wyekstrahowane i spłaszczone do postaci jednowymiarowych, statycznych tablic w języku C/C++. Użycie modyfikatora \texttt{const} sprawia, że wiedza modelu jest mapowana bezpośrednio do pamięci Flash mikrokontrolera (PROGMEM) redukując obciążenie pamięci operacyjnej podczas fazy wnioskowania. Poniżej opisano struktury wyeksportowane dla każdego z trzech algorytmów.
+
+\subsubsection{ Autoenkoder}
+W klasycznych bibliotekach sieci neuronowych takich jak scikit-learn, warstwy reprezentowane są jako obiekty operujące na dwuwymiarowych macierzach. W przygotowanym pliku nagłówkowym topologię modelu zredukowano do kilku  warstw neuronów. Wejście z 52 czujników kompresowane są sekwencyjnie do kolejnych warstw neuronów i rekonstruowane z powrotem do 52 wartości. Macierze wag zostały spłaszczone do jednowymiarowych tablic. Taki układ umożliwia mikrokontrolerowi wykonywanie propagacji sygnału w przód za pomocą prostych, zagnieżdżonych pętli \texttt{for}, bez alokacji macierzy pośrednich. Plik zawiera również wartość \texttt{THRESHOLD} wyznaczoną w oparciu o dystrybucję błędu średniokwadratowego (MSE) na zbiorze treningowym.
+
+\begin{lstlisting}[language=C++, caption={Fragment pliku nagłówkowego z wagami modelu Autoenkodera.}]
+#ifndef MODEL_WEIGHTS_H
+#define MODEL_WEIGHTS_H
+
+const int INPUT_DIM = 52;
+const int NUM_LAYERS = 4;
+const float THRESHOLD = 0.012959;
+
+// Wektory do skalowania danych wejściowych
+const float scaler_min[52] = {0.000000, 22.439240, 33.159720, 31.640620, 2.798032, /* ... */};
+const float scaler_range[52] = {2.549016, 33.333330, 22.873270, 16.579870, 797.201968, /* ... */};
+
+// Przykład definicji wag (macierze i wektory obciążeń warstw)
+// const float w_layer_0[...] = { ... };
+// const float b_layer_0[...] = { ... };
+
+#endif
+\end{lstlisting}
+
+\subsubsection { Las Izolacyjny (Isolation Forest)}
+Drzewa decyzyjne w bibliotece scikit-learn są w pamięci PC rozległymi grafami połączonymi wskaźnikami. W implementacji dla ESP32 zbiór 100 wyuczonych drzew lasu izolacyjnego został zserializowany do jednej dużej tablicy struktur \texttt{IsoNode}. Eliminacja wskaźników wymagała zastąpienia ich indeksami bezwzględnymi (\texttt{left}, \texttt{right}), określającymi dokładną pozycję dziecka w głównej tablicy. Zmienna \texttt{tree\_offsets} informuje mikrokontroler pod którym indeksem rozpoczyna się korzeń danego drzewa. Gdy wskaźniki \texttt{left} i \texttt{right} przyjmują wartość -2, ESP32 rozpoznaje liść i na podstawie zapamiętanej w nim ilości próbek (\texttt{samples}) estymuje długość niezbudowanej ścieżki algorytmem $c(n)$ \cite{isoforest}.
+
+\begin{lstlisting}[language=C++, caption={Struktura danych i początkowe węzły modelu Isolation Forest.}]
+#ifndef MODEL_WEIGHTS_H
+#define MODEL_WEIGHTS_H
+
+struct IsoNode {
+    int feature;       // Indeks cechy podziału (-2 dla liścia)
+    float threshold;   // Wartość progowa podziału
+    int left;          // Indeks lewego syna
+    int right;         // Indeks prawego syna
+    int samples;       // Liczba próbek w węźle
+};
+
+const int INPUT_DIM = 52;
+const int N_TREES = 100;
+const int MAX_SAMPLES = 256;
+const float THRESHOLD = 0.45f;
+
+// Skalery zbieżne z architekturą przetwarzania sygnałów
+const float scaler_min[52] = {0.000000, 22.439240, 33.159720, /* ... */};
+const float scaler_range[52] = {2.549016, 33.333330, 22.873270, /* ... */};
+
+// Indeksy startowe poszczególnych drzew w tablicy węzłów
+const int tree_offsets[100] = {0, 143, 254, 381, 490, 625, /* ... */};
+
+// Tablica przechowująca strukturę całego lasu (węzły wewnętrzne oraz liście)
+const IsoNode iforest_nodes[10496] = {
+    {1, 0.750228f, 1, 94, 256},
+    {25, 0.815373f, 2, 39, 100},
+    {41, 0.031913f, 3, 6, 31},
+    {41, 0.012535f, 4, 5, 2},
+    {-2, -2.000000f, -1, -1, 1}, // Przykładowy liść
+    /* ... */
+};
+
+#endif
+\end{lstlisting}
+
+\subsubsection{ Drzewa Półprzestrzenne (Half-Space Trees)}
+Model HS-Trees charakteryzuje się stałą strukturą drzew o zadanej wysokości (\texttt{TREE\_HEIGHT = 10}). Ze względu na pełną architekturę drzew binarnych, właściwości węzłów (takie jak indeksy testowanych cech, progi podziałów oraz masy/liczniki próbek w fazie referencyjnej) zostały rozdzielone na niezależne, zoptymalizowane pamięciowo tablice jednowymiarowe.
+
+\subsubsection{ Drzewa Półprzestrzenne (Half-Space Trees)}
+W modelu HS-Trees z biblioteki River zastosowano architekturę tzw. Struktury Tablic (ang. \textit{Struct of Arrays} - SoA). Zamiast używać pojedynczej tablicy przechowującej struktury (jak w Isolation Forest), parametry węzłów zostały rozbite na pięć równoległych, niezależnych wektorów (m.in. \texttt{node\_feature}, \texttt{node\_threshold}, \texttt{node\_r\_mass}). Taki zabieg nie tylko ściśle dopasowuje się do narzuconej, stałej głębokości drzew (\texttt{TREE\_HEIGHT = 10}), ale również optymalizuje współczynnik trafień do pamięci podręcznej (cache hit rate) mikroprocesora Xtensa w układzie ESP32. Ponadto w modelu tym nie estymuje się matematycznej głębokości cięcia. Kiedy podczas wnioskowania mikrokontroler dotrze do liścia, odczytuje bezpośrednio przypisaną mu tablicową wartość masy (\texttt{node\_r\_mass}), co stanowi kryterium gęstości profilowanego zachowania maszyny.
+
+\begin{lstlisting}[language=C++, caption={Struktura płaska parametrów algorytmu HS-Trees.}]
+#ifndef MODEL_WEIGHTS_H
+#define MODEL_WEIGHTS_H
+
+const int INPUT_DIM = 52;
+const int NUM_TREES = 10;
+const int TREE_HEIGHT = 10;
+const float THRESHOLD = 0.65;
+
+const float scaler_min[52] = {0.000000, 22.439240, 33.159720, /* ... */};
+const float scaler_range[52] = {2.549016, 33.333330, 22.873270, /* ... */};
+
+// Przesunięcia adresowe dla 10 zapisanych drzew binarnego podziału
+const int tree_offsets[10] = {0, 2047, 4094, 6141, 8188, 10235, 12282, 14329, 16376, 18423};
+
+// Rozbite tablice parametrów węzłów drzew struktur HS-Trees
+const int node_feature[20470] = {33, 14, 38, 46, 21, 10, 1, 34, 11, 42, -2, -2, 42, /* ... */};
+const float node_threshold[20470] = {0.167508, 0.306248, 0.623690, 0.210857, 0.170858, /* ... */};
+
+#endif
+\end{lstlisting}
+
+\subsection{Implementacja algorytmów}
+W tym podrozdziale opisano proces implementacji algorytmów detekcji anomalii bezpośrednio na mikrokontrolerze ESP32. Zaprezentowano w nim kody źródłowe oraz mechanizmy, które odtwarzają modele \textbf{wyuczone uprzednio w środowisku PC}, pozwalając na ich autonomiczne działanie w warunkach ograniczonej pamięci platformy ESP32.
+
+\subsubsection{ Implementacja modelu Autoenkodera na ESP32}
+
+Architektura wielowarstwowego perceptronu MLP w topologii autoenkodera została przeniesiona na mikrokontroler w postaci płaskich tablic reprezentujących macierze wag (WEIGHTS\_1, WEIGHTS\_2, etc.) oraz wektory obciążeń (BIAS\_1, BIAS\_2, etc.).
+
+Proces detekcji rozpoczyna się od normalizacji sygnału wejściowego za pomocą estymatorów transformacji liniowej MinMaxScaler wyznaczonych w fazie treningu. Następnie, sygnał poddawany jest propagacji w przód (ang. forward pass) przez warstwy sieci neuronowej: warstwę wejściową, warstwy ukryte dokonujące kompresji reprezentacji oraz warstwę wyjściową. W każdym neuronie realizowana jest suma iloczynów wejść i wag, a wynik poddawany jest nieliniowej funkcji aktywacji ReLU. Ewaluacja anomalii opiera się na obliczeniu błędu średniokwadratowego (MSE) pomiędzy sygnałem wejściowym a zrekonstruowanym na wyjściu sieci. Wartość MSE wyższa od zdefiniowanego progu THRESHOLD klasyfikuje wektor danych jako stan anomalii maszyny.
+
+\begin{lstlisting}[language=C++, caption={Odtworzenie algorytmu autoencodera na ESP32}]
+#include "model_weights.h"
+
+float input_data[INPUT_DIM];
+float hidden_layer[HIDDEN_DIM];
+float output_data[INPUT_DIM];
+
+(...)
+
+void loop() {
+    if (Serial.available() > 0) {
+        
+        // Wczytywanie danych z portu szeregowego
+        for (int i = 0; i < INPUT_DIM; i++) {
+            input_data[i] = Serial.parseFloat();
+        }
+        while(Serial.read() != -1);
+
+        // Skalowanie danych wejściowych (MinMaxScaler)
+        for (int i = 0; i < INPUT_DIM; i++) {
+            if (scaler_range[i] > 0) {
+                input_data[i] = (input_data[i] - scaler_min[i]) / scaler_range[i];
+            } else {
+                input_data[i] = 0.0;
+            }
+        }
+
+        // Propagacja w przód - Warstwa Ukryta
+        for (int i = 0; i < HIDDEN_DIM; i++) {
+            float sum = BIAS_1[i]; 
+            for (int j = 0; j < INPUT_DIM; j++) {
+                sum += input_data[j] * WEIGHTS_1[j * HIDDEN_DIM + i];
+            }
+            hidden_layer[i] = relu(sum);
+        }
+
+        // Propagacja w przód - Warstwa Wyjściowa
+        for (int i = 0; i < INPUT_DIM; i++) {
+            float sum = BIAS_2[i]; 
+            for (int j = 0; j < HIDDEN_DIM; j++) {
+                sum += hidden_layer[j] * WEIGHTS_2[j * INPUT_DIM + i];
+            }
+            output_data[i] = relu(sum);
+        }
+
+        // Obliczanie błędu rekonstrukcji (MSE)
+        float mse = 0.0;
+        for (int i = 0; i < INPUT_DIM; i++) {
+            float diff = input_data[i] - output_data[i];
+            mse += (diff * diff);
+        }
+        mse /= INPUT_DIM;
+
+        (...)
+        
+        if (mse > THRESHOLD) {
+            Serial.println(" -> WYNIK: ANOMALIA!");
+        } else {
+            Serial.println(" -> WYNIK: NORMALNY.");
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{Wnioskowanie z wykorzystaniem algorytmu Isolation Forest}
+
+Model Isolation Forest został zaadaptowany do środowiska ESP32 przez spłaszczenie struktur drzewiastych do jednowymiarowej tablicy struktur IsoNode. Każdy węzeł zawiera indeks analizowanej cechy, progową wartość podziału oraz wskaźniki na potomne gałęzie lewą i prawą. Tablica pomocnicza tree\_offsets pełni funkcję rejestru adresów korzeni poszczególnych drzew w przestrzeni pamięci stałej.
+
+Algorytm procesuje znormalizowany wektor danych poprzez iteracyjne schodzenie po strukturze poszczególnych drzew. Dla każdego węzła realizowana jest instrukcja warunkowa decydująca o kierunku propagacji w dół grafu, z inkrementacją licznika głębokości. W przypadku napotkania węzła końcowego (liścia) zawierającego agregację próbek treningowych, algorytm aplikuje matematyczną korektę szacującą nierozwiniętą ścieżkę. Wyznaczony indeks anomalii (ang. Anomaly Score) obliczany jest na podstawie średniej głębokości ścieżek z całego zespołu drzew w odniesieniu do średniej teoretycznej dla zadanego rozmiaru podzbioru. Analogicznie do autoenkodera, przekroczenie ustalonego progu determinuje detekcję anomalii  \cite{isoforest}.
+
+\begin{lstlisting}[language=C++, caption={Odtworzenie algorytmu Isolation Forest na ESP32}]
+#include <Arduino.h>
+#include <math.h>
+#include "model_weights.h"
+
+float input_data[INPUT_DIM];
+
+// Funkcja c(n) - średnia długość ścieżki
+float c_factor(int n) {
+    if (n > 2) {
+        return 2.0f * (log((float)(n - 1)) + 0.5772156649f) - (2.0f * (float)(n - 1) / (float)n);
+    } else if (n == 2) {
+        return 1.0f;
+    }
+    return 0.0f;
+}
+
+// Funkcja przechodzenia pojedynczego drzewa
+float compute_path_length(const float* x, int tree_idx) {
+    int node_idx = 0;
+    int depth = 0;
+    int offset = tree_offsets[tree_idx];
+    
+    while (true) {
+        IsoNode node = iforest_nodes[offset + node_idx];
+        
+        // Cecha -2 : liście  (Scikit-Learn)
+        if (node.feature == -2) {
+            return (float)depth + c_factor((int)node.samples);
+        }
+        
+        // Nawigacja w lewo lub w prawo w zależności od progu
+        if (x[node.feature] <= node.threshold) {
+            node_idx = node.left;
+        } else {
+            node_idx = node.right;
+        }
+        depth++;
+    }
+}
+
+void loop() {
+
+    if (Serial.available() > 0) {
+        
+    (...) 
+
+        // --- START POMIARU CZASU ---
+        unsigned long start_time = micros();
+
+        // Skalowanie danych wejściowych
+        for (int i = 0; i < INPUT_DIM; i++) {
+            if (scaler_range[i] > 0) {
+                input_data[i] = (input_data[i] - scaler_min[i]) / scaler_range[i];
+            } else {
+                input_data[i] = 0.0;
+            }
+        }
+
+        // Obliczenie średniej długości ścieżki we wszystkich drzewach
+        float avg_path = 0.0;
+        for (int i = 0; i < N_TREES; i++) {
+            avg_path += compute_path_length(input_data, i);
+        }
+        avg_path /= (float)N_TREES;
+
+        // Obliczenie Anomaly Score: 2^(-E(h(x)) / c(n))
+        float anomaly_score = pow(2.0f, -avg_path / c_factor(MAX_SAMPLES));
+
+        // --- KONIEC POMIARU CZASU ---
+        unsigned long end_time = micros();
+
+        Serial.print("Anomaly Score: ");
+        Serial.print(anomaly_score, 6);
+        
+        if (anomaly_score > THRESHOLD) {
+            Serial.print(" | Status: !!! ANOMALIA !!!");
+        } else {
+            Serial.print(" | Status: OK");
+        }
+
+        (...)
+    }
+}
+\end{lstlisting}
+
+\subsection{Analiza z wykorzystaniem algorytmu Half-Space Trees}
+
+Przeniesienie algorytmu HS-Trees na platformę mikrokontrolera zrealizowano z użyciem równoległych tablic stałych określających indeksy cech (node\_feature), progi podziałów półprzestrzeni (node\_threshold), relacje topologiczne (node\_left, node\_right) oraz masę węzłów (node\_r\_mass). W przeciwieństwie do poprzednich metod, HS-Trees ma predefiniowaną głębokość ustaloną dla każdego drzewa co ułatwia zarządzanie pamięcią.
+
+Przepływ danych polega na trawersacji znormalizowanego sygnału przez drzewa, kierując się prostymi warunkami logicznymi odniesionymi do wartości progowych w węzłach. Zamiast mierzyć głębokość przejścia (Isolation Forest), zwiększana jest masa węzła (r\_mass), do którego przypisana została dana próbka. Masa odzwierciedla częstotliwość występowania podobnych wzorców w zbiorze. Niska wartość masy wskazuje, że próbka trafiła do rejonu przestrzeni cech rzadko eksplorowanego podczas fazy uczenia, co z wysokim prawdopodobieństwem świadczy o wystąpieniu anomalii. Ostateczna decyzja klasyfikacyjna zapada po agregacji wartości wag z zespołu wszystkich drzew.
+
+\begin{lstlisting}[language=C++, caption={Odtworzenie algorytmu Half-space trees na ESP32}]
+#include "model_weightsHS_Trees.h"
+
+// Funkcja Min-Max Scaler
+void scale_input(const float* raw_input, float* scaled_output) {
+    for (int i = 0; i < INPUT_DIM; i++) {
+        if (scaler_range[i] != 0) {
+            scaled_output[i] = (raw_input[i] - scaler_min[i]) / scaler_range[i];
+        } else {
+            scaled_output[i] = 0;
+        }
+    }
+}
+
+// score dla pojedynczego drzewa
+float score_tree(const float* input, int tree_idx) {
+    int current_node_idx = tree_offsets[tree_idx];
+    
+    while (true) {
+        int feature = node_feature[current_node_idx];
+        
+        // feature == -2: liść
+        if (feature == -2) {
+            return node_r_mass[current_node_idx];
+        }
+
+        // Decyzja o przejściu lewo/prawo
+        if (input[feature] <= node_threshold[current_node_idx]) {
+            int left_rel_offset = node_left[current_node_idx];
+            if (left_rel_offset == -1) return node_r_mass[current_node_idx];
+            current_node_idx += left_rel_offset;
+        } else {
+            int right_rel_offset = node_right[current_node_idx];
+            if (right_rel_offset == -1) return node_r_mass[current_node_idx];
+            current_node_idx += right_rel_offset;
+        }
+    }
+}
+
+
+float get_hs_trees_score(const float* scaled_input) {
+    float total_r_mass = 0;
+    
+    // suma r_mass ze wszystkich drzew
+    for (int i = 0; i < NUM_TREES; i++) {
+        total_r_mass += score_tree(scaled_input, i);
+    }
+    
+    // Normalizacja wyniku
+    const float WINDOW_SIZE = 500.0;
+    float avg_mass = total_r_mass / NUM_TREES;
+    float normalized_score = 1.0 - (avg_mass / WINDOW_SIZE);
+    
+    return normalized_score;
+}
+
+(...)
+
+void loop() {
+
+    if (Serial.available() > 0) {
+        String inputStr = Serial.readStringUntil('\n');
+        float raw_sensor_data[INPUT_DIM];
+        int valIdx = 0;
+        
+        // Parsowanie linii CSV ze złącza szeregowego
+        char* ptr;
+        char buf[inputStr.length() + 1];
+        inputStr.toCharArray(buf, sizeof(buf));
+        ptr = strtok(buf, ",");
+        
+        while (ptr != NULL && valIdx < INPUT_DIM) {
+            raw_sensor_data[valIdx++] = atof(ptr);
+            ptr = strtok(NULL, ",");
+        }
+
+        if (valIdx == INPUT_DIM) {
+            float scaled_data[INPUT_DIM];
+            unsigned long start_time = micros(); // Pomiar czasu predykcji
+            
+            scale_input(raw_sensor_data, scaled_data);
+            float score = get_hs_trees_score(scaled_data);
+            
+            unsigned long end_time = micros(); 
+            bool is_anomaly = (score > THRESHOLD);
+            
+            // Wypisanie wyniku
+            Serial.print("Score: ");
+            Serial.print(score, 6);
+            if (is_anomaly) {
+                Serial.print(" | Status: !!! ANOMALIA !!!");
+            } else {
+                Serial.print(" | Status: OK");
+            }
+            Serial.print(" | Time: "); Serial.print(end_time - start_time);
+            Serial.print(" us");
+            
+        }
+    }
+}
+\end{lstlisting}
 
 \section{Wyniki detekcji i parametry wydajnościowe}
 
@@ -348,12 +729,12 @@ W celu ujednolicenia formatu danych z matematycznymi standardami ewaluacji (wyma
     PC & Half-Space Trees & 0.9762 & 0.0987 & 0.8684 & 0.1772 & 0.9907 & 66 & 603 & 65417 & 10 \\
     \midrule
     Raspberry Pi & Autoencoder & 0.0081 & 0.0287 & 0.9737 & 0.0558 & 0.9621 & 74 & 2502 & 63518 & 2 \\
-    Raspberry Pi & Half-Space Trees & 0.9762 & 0.0987 & 0.8684 & 0.1772 & 0.9907 & 66 & 603 & 65417 & 10 \\
     Raspberry Pi & Isolation Forest & 0.0769 & 0.0756 & 0.8158 & 0.1384 & 0.9883 & 62 & 758 & 65262 & 14 \\
+    Raspberry Pi & Half-Space Trees & 0.9762 & 0.0987 & 0.8684 & 0.1772 & 0.9907 & 66 & 603 & 65417 & 10 \\
     \midrule
     Jetson & Autoencoder & 0.0081 & 0.0287 & 0.9737 & 0.0558 & 0.9621 & 74 & 2502 & 63518 & 2 \\
     Jetson & Isolation Forest & 0.0778 & 0.0753 & 0.7895 & 0.1375 & 0.9886 & 60 & 737 & 65283 & 16 \\
-    Jetson & Half-Space Trees & 0.9975 & 0.6667 & 0.0263 & 0.0506 & 0.9989 & 2 & 1 & 66019 & 74 \\
+    Jetson & Half-Space Trees & 0.9762 & 0.0987 & 0.8684 & 0.1772 & 0.9989 & 66 & 603 & 65417 & 10 \\
     \midrule
     \multicolumn{11}{c}{\textit{ESP - Model nauczony na PC, przepuszczenie przez wagi (Inference)}} \\
     \midrule
@@ -382,14 +763,14 @@ W celu ujednolicenia formatu danych z matematycznymi standardami ewaluacji (wyma
     PC & Half-Space Trees & 134.540 & 13.8561 & 0.2080 & 0.2301 & 0.2375 & 4770 & 9.8 & 268.981 & brak \\
     \midrule
     Raspberry Pi & Autoencoder & 18.223 & 0.1471 & 0.0844 & 0.0892 & 0.1002 & 449323 & 25.1 & 3.544 & 49.0 \\
-    Raspberry Pi & Half-Space Trees & 233.411 & 16.2614 & 0.2460 & 0.2680 & 0.2777 & 4064 & 23.2 & 268.981 & 47.4 \\
     Raspberry Pi & Isolation Forest & 1.722 & 0.2364 & 6.2460 & 6.350 & 6.913 & 279590 & 25.5 & 44.001 & 46.9 \\
+    Raspberry Pi & Half-Space Trees & 233.411 & 16.2614 & 0.2460 & 0.2680 & 0.2777 & 4064 & 23.2 & 268.981 & 47.4 \\
     \midrule
     Jetson & Autoencoder & 27.308 & 0.3307 & 0.2419 & brak & 0.2924 & 199888 & 58.7 & 3.483 & brak \\
     Jetson & Isolation Forest & 2.815 & 0.4014 & 10.9220 & brak & 11.925 & 164659 & 18.5 & 46.593 & brak \\
-    Jetson & Half-Space Trees & 2684.675 & 51.8407 & 0.8049 & brak & 0.9051 & 1274 & 48.8 & 400.044 & brak \\
+    Jetson & Half-Space Trees & 281.192 & 40.5304 & 0.6243 & brak & 0.7175 & 1630.78 & 17.1 & 400.220 & brak \\
     \midrule
-    \multicolumn{11}{c}{\textit{ESP - Model nauczony na PC, przepuszczenie przez wagi (Inference)}} \\
+    \multicolumn{11}{c}{\textbf{\textit{ESP - UWAGA: Model nauczony na PC, przepuszczenie przez wagi (wyłącznie inferencja)}}} \\
     \midrule
     ESP & Autoencoder & 9.855 & 0.000062 & 0.0873 & 0.1725 & 0.2009 & 11450 & brak & 0.0417 & 65.0 \\
     ESP & Isolation Forest & 1.319 & 0.001072 & 1.0792 & 1.4383 & 1.5156 & 926 & brak & 0.0417 & 64.8 \\
@@ -399,12 +780,6 @@ W celu ujednolicenia formatu danych z matematycznymi standardami ewaluacji (wyma
     }
 \end{table}
 
-
-\begin{itemize}[label={--},labelsep=0.4cm,leftmargin=0.6cm]
-\item wartości chwilowe podstawowych wielkości fizycznych używanych np. w elektrotechnice należy zapisać małymi literami, np. $u$, $i$, lub stosować zapis np. $u(t)$, lub stosować indeks ,,$t$'' przy wielkości, np. $U_t$,
-
-\end{itemize}
-
 \section{Podsumowanie i wnioski końcowe}
 
 
@@ -412,7 +787,19 @@ W celu ujednolicenia formatu danych z matematycznymi standardami ewaluacji (wyma
 
 \addcontentsline{toc}{section}{Literatura}
 
-\begin{thebibliography}{4}
+\begin{thebibliography}{99}
+\bibitem{rpi5specs} \url{https://www.raspberrypi.com/documentation/computers/raspberry-pi.html}, Dostęp 02.06.2026.
+\bibitem{jetsonspecs} \url{https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/latest/hardware_layout.html}, Dostęp 02.06.2026.
+\bibitem{amdspecs} \url{https://www.amd.com/en/products/processors/laptop/ryzen/7000-series/amd-ryzen-7-7435hs.html}, Dostęp 02.06.2026.
+\bibitem{esp32} \url{https://documentation.espressif.com/esp32\_datasheet\_en.html}, Dostęp 02.06.2026.
+\bibitem{anomalysurvey} Chandola, Varun \& Banerjee, Arindam \& Kumar, Vipin. (2009). Anomaly Detection: A Survey. ACM Comput. Surv.. 41. 10.1145/1541880.1541882.
+\bibitem{isoforest}Liu, Fei Tony \& Ting, Kai \& Zhou, Zhi-Hua. (2012). Isolation-Based Anomaly Detection. ACM Transactions on Knowledge Discovery From Data - TKDD. 6. 9-15. doi: 10.1145/2133360.2133363. 
+\url{https://www.researchgate.net/publication/239761771\_Isolation-Based\_Anomaly\_Detection}, Dostęp 02.06.2026.
+\bibitem{fastanomalydetection} Swee Chuan Tan, Kai Ming Ting, and Tony Fei Liu. 2011. Fast anomaly detection for streaming data. In Proceedings of the Twenty-Second international joint conference on Artificial Intelligence - Volume Volume Two (IJCAI'11). AAAI Press, 1511–1516.
+\url{https://www.ijcai.org/Proceedings/11/Papers/254.pdf}, Dostęp 02.06.2026.
+\bibitem{kaggledata} \url{https://www.kaggle.com/datasets/nphantawee/pump-sensor-data}, Dostęp 02.06.2026.
+
+  
 \end{thebibliography}
 
 \clearpage

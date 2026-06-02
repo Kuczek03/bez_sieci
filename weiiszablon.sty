@@ -13,7 +13,8 @@
 \usepackage[polish]{babel}
 \usepackage[utf8]{inputenc} 			% kodowanie 
 \usepackage[T1]{fontenc} 				% czcionka Timnes New Roman
-\usepackage[a4paper,left=3.5cm,right=2cm,top=2cm,bottom=2.5cm,includefoot=false,includehead=false,footskip=1.16cm]{geometry} 	% wymiary strony
+% \usepackage[a4paper,left=3.5cm,right=2cm,top=2cm,bottom=2.5cm,includefoot=false,includehead=false,footskip=1.16cm]{geometry} 	% wymiary strony
+\usepackage[a4paper,twoside,left=2.5cm,right=2.5cm,top=2cm,bottom=2.5cm,includefoot=false,includehead=false,footskip=1.16cm]{geometry}
 \usepackage{courier} 					% czcionka courier
 \usepackage{mathptmx} 					% pakiet wymagany do czcionki Times New Roman
 \usepackage{graphicx} 					% pakiet graficzny
@@ -22,7 +23,7 @@
 \usepackage{amsmath} 					% pakiet matematyczny
 \usepackage{color} 						% podstawowe kolory
 \usepackage{hyperref} 				    % aktywne linki
-\usepackage[final]{listingsutf8}                   % styl dla formatowania kodów źródłowych
+\usepackage[final]{listings}                   % styl dla formatowania kodów źródłowych
 \usepackage{tikz}
 \usepackage{bm}							% dla pogrubionych i pochylonych czcionek w środowisku matematycznym
 
@@ -78,8 +79,9 @@
   showtabs=false,                  % show tabs within strings adding particular underscores
   stepnumber=1,                    % the step between two line-numbers. If it's 1, each line will be numbered
   stringstyle=\color{mymauve},     % string literal style
-  tabsize=2	                   % sets default tabsize to 2 spaces
-  }
+  tabsize=2,	                   % sets default tabsize to 2 spaces
+  literate={ą}{{\k{a}}}1 {ć}{{\'c}}1 {ę}{{\k{e}}}1 {ł}{{\l{}}}1 {ń}{{\'n}}1 {ó}{{\'o}}1 {ś}{{\'s}}1 {ź}{{\'z}}1 {ż}{{\.z}}1 {Ą}{{\k{A}}}1 {Ć}{{\'C}}1 {Ę}{{\k{E}}}1 {Ł}{{\L{}}}1 {Ń}{{\'N}}1 {Ó}{{\'O}}1 {Ś}{{\'S}}1 {Ź}{{\'Z}}1 {Ż}{{\.Z}}1
+}
 
 % rozmiar czcionki numeru strony
 \renewcommand*{\thepage}{\footnotesize\arabic{page}}
@@ -335,7 +337,7 @@
 \end{center}
 ~\\
 
-~\\[3.5cm]
+~\\[1.5cm]
 \begin{center}
 {\Large Rzeszów, \the\year}
 \end{center}
@@ -351,3 +353,11 @@
 \renewcommand{\section}{\clearpage\oldsection}
 \newcommand{\microS}{$\unslant\mu$}
 \endinput
+
+\lstset{
+  extendedchars=true,       % Pozwala na używanie rozszerzonego zestawu znaków
+  keepspaces=true,          % Zapobiega znikaniu spacji przy niestandardowych znakach
+  % Twoje reguły literate:
+  literate={ą}{{\k{a}}}1 {ć}{{\'c}}1 {ę}{{\k{e}}}1 {ł}{{\l{}}}1 {ń}{{\'n}}1 {ó}{{\'o}}1 {ś}{{\'s}}1 {ź}{{\'z}}1 {ż}{{\.z}}1
+           {Ą}{{\k{A}}}1 {Ć}{{\'C}}1 {Ę}{{\k{E}}}1 {Ł}{{\L{}}}1 {Ń}{{\'N}}1 {Ó}{{\'O}}1 {Ś}{{\'S}}1 {Ź}{{\'Z}}1 {Ż}{{\.Z}}1
+}
